@@ -6,7 +6,7 @@ Automated Tesla energy management using AWS Lambda and the NetZero Developer API
 
 This project provides two scheduled Lambda functions that automatically configure your Tesla energy system:
 
-- **Morning Job (6:45 AM CDT daily)**: Sets backup reserve to 25%, autonomous mode, battery exports enabled, grid charging disabled
+- **Morning Job (6:45 AM CDT daily)**: Sets backup reserve to 20%, autonomous mode, battery exports enabled, grid charging disabled
 - **Evening Job (9:15 PM CDT daily)**: Sets backup reserve to 100%, autonomous mode, solar-only exports, grid charging enabled
 
 ## Prerequisites
@@ -89,7 +89,7 @@ aws lambda invoke --function-name netzero-evening-config --payload '{}' response
 ## Configuration Details
 
 ### Morning Configuration (6:45 AM CDT)
-- Backup Reserve: 25%
+- Backup Reserve: 20%
 - Operational Mode: Autonomous
 - Energy Exports: Battery OK (solar and battery)
 - Grid Charging: Disabled
