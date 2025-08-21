@@ -55,6 +55,7 @@ jobs:
 
   approve:
     name: Manual Approval
+    permissions: {}
     runs-on: ubuntu-latest
     needs: terraform
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
