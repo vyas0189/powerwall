@@ -15,14 +15,12 @@
         "lambda:GetFunctionCodeSigningConfig"
       ],
       "Resource": [
-        "arn:aws:lambda:us-east-1:358870220937:function:netzero-*"
+        "arn:aws:lambda:us-east-1:358870220937:function:netzero-*",
+        "arn:aws:lambda:us-east-1:358870220937:code-signing-config/*"
       ],
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "us-east-1"
-        },
-        "DateGreaterThan": {
-          "aws:CurrentTime": "2024-01-01T00:00:00Z"
         }
       }
     },
