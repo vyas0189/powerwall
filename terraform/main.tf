@@ -31,7 +31,7 @@ variable "site_id" {
 # IAM role for Lambda functions
 resource "aws_iam_role" "lambda_role" {
   name = "netzero-lambda-role"
-  
+
   lifecycle {
     ignore_changes = [name]
   }
@@ -146,7 +146,7 @@ resource "aws_cloudwatch_event_rule" "morning_schedule" {
   name                = "netzero-morning-schedule"
   description         = "Trigger morning Tesla configuration at 6:45 AM CDT daily"
   schedule_expression = "cron(45 11 * * ? *)"
-  
+
   lifecycle {
     ignore_changes = [tags]
   }
@@ -171,7 +171,7 @@ resource "aws_cloudwatch_event_rule" "evening_schedule" {
   name                = "netzero-evening-schedule"
   description         = "Trigger evening Tesla configuration at 9:15 PM CDT daily"
   schedule_expression = "cron(15 2 * * ? *)"
-  
+
   lifecycle {
     ignore_changes = [tags]
   }
