@@ -52,12 +52,6 @@ jobs:
           -var="site_id=${{ secrets.SITE_ID }}" \
           -out=tfplan
     
-    - name: Upload Plan Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: terraform-plan
-        path: terraform/tfplan
-        retention-days: 5
 
   approve:
     name: Manual Approval
@@ -99,12 +93,13 @@ jobs:
     - name: Terraform Init
       run: terraform init
     
-    - name: Download Plan Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: terraform-plan
-        path: terraform/
+    - name: Terraform Plan (Fresh)
+      run: |
+        terraform plan \
+          -var="api_key=${{ secrets.API_KEY }}" \
+          -var="site_id=${{ secrets.SITE_ID }}" \
+          -out=fresh-tfplan
     
     - name: Terraform Apply
-      run: terraform apply -auto-approve tfplan
+      run: terraform apply -auto-approve fresh-tfplan
 
