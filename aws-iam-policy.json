@@ -89,12 +89,7 @@
       ],
       "Resource": [
         "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
-      ],
-      "Condition": {
-        "StringEquals": {
-          "s3:x-amz-server-side-encryption": "AES256"
-        }
-      }
+      ]
     },
     {
       "Sid": "TerraformStateBucketList",
