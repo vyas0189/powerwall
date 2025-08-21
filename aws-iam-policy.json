@@ -11,7 +11,8 @@
         "lambda:GetFunction",
         "lambda:AddPermission",
         "lambda:RemovePermission",
-        "lambda:ListVersionsByFunction"
+        "lambda:ListVersionsByFunction",
+        "lambda:GetFunctionCodeSigningConfig"
       ],
       "Resource": [
         "arn:aws:lambda:us-east-1:358870220937:function:netzero-*"
