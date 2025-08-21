@@ -12,6 +12,8 @@ jobs:
   validate-secrets:
     name: Validate Secrets
     runs-on: ubuntu-latest
+    # Only run secret validation on push to main, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
     - name: Check required secrets

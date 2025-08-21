@@ -12,11 +12,41 @@ env:
   TF_VERSION: 1.5.0
 
 jobs:
+  terraform-pr:
+    name: terraform (PR check)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    defaults:
+      run:
+        working-directory: terraform
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@651471c36a6092792c552e8b1bef71e592b462d8 # v3.1.1
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+    
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive
+    
+    - name: Terraform Init
+      run: terraform init -backend=false
+    
+    - name: Terraform Validate
+      run: terraform validate
+
   terraform:
     name: terraform
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     
     defaults:
       run:
