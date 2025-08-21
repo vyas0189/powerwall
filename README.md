@@ -1,6 +1,6 @@
-# NetZero Tesla Scheduler
+# Powerwall Scheduler
 
-Automated Tesla energy management using AWS Lambda and the NetZero Developer API with GitHub Actions CI/CD pipeline.
+Automated Tesla energy management using AWS Lambda and the NetZero Developer API with enterprise-grade security and automated CI/CD pipeline.
 
 ## Overview
 
@@ -8,6 +8,15 @@ This project provides two scheduled Lambda functions that automatically configur
 
 - **Morning Job (6:45 AM CDT daily)**: Sets backup reserve to 20%, autonomous mode, battery exports enabled, grid charging disabled
 - **Evening Job (9:15 PM CDT daily)**: Sets backup reserve to 100%, autonomous mode, solar-only exports, grid charging enabled
+
+## 🏆 Features
+
+- ✅ **Serverless Architecture**: AWS Lambda + EventBridge scheduling
+- ✅ **Enterprise Security**: KMS encryption, IAM least privilege, secret scanning
+- ✅ **Automated CI/CD**: GitHub Actions with manual approval gates
+- ✅ **Infrastructure as Code**: Terraform with S3 state backend
+- ✅ **Dependency Management**: Automated security updates via Dependabot
+- ✅ **Code Quality**: Linting, formatting, security scanning with CodeQL
 
 ## Prerequisites
 
@@ -45,14 +54,18 @@ git push origin main
 ```
 
 The GitHub Actions workflow will:
-- ✅ Run Terraform format check
-- ✅ Plan infrastructure changes
-- ✅ Deploy Lambda functions with dependencies
-- ✅ Test both functions automatically
+- ✅ Run CI checks (linting, formatting, Terraform validation)
+- ✅ Plan infrastructure changes with full Terraform output
+- ✅ Require manual approval for production deployment
+- ✅ Deploy Lambda functions with automatic dependency packaging
+- ✅ Apply infrastructure changes with zero downtime
 
 ### 4. Monitor Deployment
 
-Check the Actions tab in your GitHub repository to monitor deployment progress and view logs.
+Check the Actions tab in your GitHub repository to monitor deployment progress and view logs. The pipeline includes:
+- **CI Pipeline**: Runs on all PRs and pushes
+- **Security Scanning**: CodeQL analysis and secret detection
+- **Manual Approval**: Production environment gate for safety
 
 ## Manual Deployment Options
 
@@ -69,13 +82,22 @@ terraform apply -var="api_key=$API_KEY" -var="site_id=$SITE_ID"
 ```
 
 
-## Files
+## 📁 Project Structure
 
+### Core Files
 - `morning_config.py` - Lambda function for morning configuration
 - `evening_config.py` - Lambda function for evening configuration  
-- `requirements.txt` - Python dependencies
-- `terraform/main.tf` - Terraform infrastructure as code
-- `.github/workflows/deploy.yml` - GitHub Actions CI/CD pipeline
+- `requirements.txt` - Python dependencies (automatically managed)
+
+### Infrastructure
+- `terraform/main.tf` - Terraform infrastructure as code (AWS provider v6.9)
+- `terraform-bootstrap/main.tf` - S3 state backend setup
+
+### CI/CD & Security
+- `.github/workflows/deploy.yml` - Production deployment pipeline
+- `.github/workflows/ci.yml` - Code quality and security checks
+- `.github/dependabot.yml` - Automated dependency updates
+- `SECURITY.md` - Security policy and vulnerability reporting
 
 ## Testing
 
@@ -106,13 +128,67 @@ View logs in AWS CloudWatch:
 - `/aws/lambda/netzero-morning-config`
 - `/aws/lambda/netzero-evening-config`
 
-## GitHub Actions Workflow
+## 🔐 Security Features
 
-The pipeline triggers on:
+This project implements enterprise-grade security:
+
+### Infrastructure Security
+- **KMS Encryption**: Lambda environment variables encrypted at rest
+- **S3 State Encryption**: Terraform state encrypted with versioning
+- **IAM Least Privilege**: Minimal required permissions for all roles
+- **VPC Ready**: Architecture supports private networking
+
+### GitHub Security
+- **Secret Scanning**: Automated detection with push protection
+- **CodeQL Analysis**: Static security analysis for all code
+- **Dependabot**: Automated security updates for dependencies
+- **Branch Protection**: Required reviews and status checks
+- **SHA-pinned Actions**: Supply chain attack prevention
+
+### CI/CD Security
+- **Manual Approval Gates**: Production deployments require approval
+- **Separate PR/Push Workflows**: No secrets exposed to pull requests
+- **Terraform State Locking**: Prevents concurrent modifications
+- **Encrypted Secrets**: All sensitive data properly secured
+
+## 🚀 GitHub Actions Workflow
+
+### CI Pipeline (Runs on all PRs)
+- Code linting and formatting (flake8, black)
+- Python syntax validation
+- Terraform format and validation
+- Security scanning with CodeQL
+
+### Deploy Pipeline (Main branch only)
+- Full Terraform plan with state backend
+- Manual approval for production changes
+- Automated Lambda packaging and deployment
+- Infrastructure updates with zero downtime
+
+**Triggers:**
 - Push to main branch (full deployment)
-- Pull requests (plan only)
+- Pull requests (validation only)
 - Manual workflow dispatch
 
-## API Reference
+## 🔗 API Reference
 
 Uses NetZero Developer API: https://docs.netzero.energy/docs/tesla/API.html
+
+## 📊 Monitoring & Observability
+
+### AWS CloudWatch
+- `/aws/lambda/netzero-morning-config` - Morning job logs
+- `/aws/lambda/netzero-evening-config` - Evening job logs
+
+### GitHub Actions
+- **Deployment Status**: Actions tab shows all pipeline runs
+- **Security Alerts**: Security tab for vulnerability reports
+- **Dependency Updates**: PRs automatically created by Dependabot
+
+## 🛠️ Maintenance
+
+This project is designed for minimal maintenance:
+- **Automated Updates**: Dependabot handles security patches
+- **Self-Monitoring**: CloudWatch logs capture all executions
+- **Version Pinning**: SHA-locked actions prevent supply chain issues
+- **State Management**: Terraform state automatically backed up to S3
