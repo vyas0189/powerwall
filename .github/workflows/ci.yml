@@ -7,6 +7,45 @@ on:
     branches: [ main ]
 
 jobs:
+  validate-secrets:
+    name: Validate Secrets
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check required secrets
+      run: |
+        echo "Checking required secrets..."
+        
+        if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+          echo "❌ AWS_ACCESS_KEY_ID secret is missing"
+          exit 1
+        else
+          echo "✅ AWS_ACCESS_KEY_ID is set"
+        fi
+        
+        if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+          echo "❌ AWS_SECRET_ACCESS_KEY secret is missing"
+          exit 1
+        else
+          echo "✅ AWS_SECRET_ACCESS_KEY is set"
+        fi
+        
+        if [ -z "${{ secrets.API_KEY }}" ]; then
+          echo "❌ API_KEY secret is missing"
+          exit 1
+        else
+          echo "✅ API_KEY is set"
+        fi
+        
+        if [ -z "${{ secrets.SITE_ID }}" ]; then
+          echo "❌ SITE_ID secret is missing"
+          exit 1
+        else
+          echo "✅ SITE_ID is set"
+        fi
+        
+        echo "🎉 All required secrets are configured!"
+
   lint-and-test:
     name: Lint and Test
     runs-on: ubuntu-latest
