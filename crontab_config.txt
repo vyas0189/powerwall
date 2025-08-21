@@ -1,0 +1,8 @@
+# NetZero Tesla Configuration Cron Jobs
+# Make sure to set environment variables API_KEY and SITE_ID before installing
+
+# Morning configuration: 6:45 AM daily
+45 6 * * * /usr/bin/python3 /Users/vyas0189/projects/netzero-api/morning_config.py >> /var/log/tesla_morning.log 2>&1
+
+# Evening configuration: 9:15 PM daily  
+15 21 * * * /usr/bin/python3 /Users/vyas0189/projects/netzero-api/evening_config.py >> /var/log/tesla_evening.log 2>&1
