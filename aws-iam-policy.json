@@ -52,16 +52,13 @@
         "iam:GetRole",
         "iam:PassRole",
         "iam:AttachRolePolicy",
-        "iam:DetachRolePolicy"
+        "iam:DetachRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies"
       ],
       "Resource": [
         "arn:aws:iam::358870220937:role/netzero-*"
-      ],
-      "Condition": {
-        "StringEquals": {
-          "iam:PassedToService": "lambda.amazonaws.com"
-        }
-      }
+      ]
     },
     {
       "Sid": "CloudWatchLogsManagement",
