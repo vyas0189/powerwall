@@ -92,9 +92,9 @@ resource "aws_iam_user_policy" "github_actions_policy" {
         Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"]
       },
       {
-        Sid    = "TerraformStateBucketList"
-        Effect = "Allow"
-        Action = ["s3:ListBucket"]
+        Sid      = "TerraformStateBucketList"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
         Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937"]
         Condition = {
           StringLike = {
