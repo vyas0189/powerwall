@@ -68,6 +68,15 @@ resource "aws_iam_user_policy" "github_actions_policy" {
         Resource = ["arn:aws:iam::358870220937:role/netzero-*"]
       },
       {
+        Sid    = "IAMUserPolicyManagement"
+        Effect = "Allow"
+        Action = [
+          "iam:GetUserPolicy",
+          "iam:PutUserPolicy"
+        ]
+        Resource = ["arn:aws:iam::358870220937:user/netzero-github-actions"]
+      },
+      {
         Sid    = "CloudWatchLogsManagement"
         Effect = "Allow"
         Action = [
