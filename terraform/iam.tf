@@ -1,13 +1,9 @@
 # IAM policy for GitHub Actions user
 # This policy grants permissions needed for Terraform to manage the infrastructure
 
-data "aws_iam_user" "github_actions" {
-  user_name = "netzero-github-actions"
-}
-
 resource "aws_iam_user_policy" "github_actions_policy" {
   name = "netzero-github-actions-policy"
-  user = data.aws_iam_user.github_actions.user_name
+  user = "netzero-github-actions"
 
   policy = jsonencode({
     Version = "2012-10-17"
