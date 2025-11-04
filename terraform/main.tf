@@ -177,11 +177,12 @@ resource "aws_lambda_permission" "morning_eventbridge_cdt" {
 }
 
 # EventBridge rule for morning schedule during November (transition month)
-# Covers both CDT and CST for November
+# Covers both CDT and CST only for first week of November (DST transition)
+# Day 1-7 of November to catch the first Sunday transition
 resource "aws_cloudwatch_event_rule" "morning_schedule_nov" {
   name                = "netzero-morning-schedule-nov"
-  description         = "Trigger morning Tesla configuration at 6:45 AM during November transition"
-  schedule_expression = "cron(45 11,12 ? 11 * *)"
+  description         = "Trigger morning Tesla configuration at 6:45 AM during November DST transition week"
+  schedule_expression = "cron(45 11,12 1-7 11 ? *)"
   state               = "ENABLED"
 
   lifecycle {
@@ -203,9 +204,37 @@ resource "aws_lambda_permission" "morning_eventbridge_nov" {
   source_arn    = aws_cloudwatch_event_rule.morning_schedule_nov.arn
 }
 
+# EventBridge rule for morning schedule during March (DST start transition)
+# Covers both CDT and CST only for second week of March (DST starts 2nd Sunday)
+# Day 8-14 of March to catch the second Sunday transition
+resource "aws_cloudwatch_event_rule" "morning_schedule_mar" {
+  name                = "netzero-morning-schedule-mar"
+  description         = "Trigger morning Tesla configuration at 6:45 AM during March DST start transition week"
+  schedule_expression = "cron(45 11,12 8-14 3 ? *)"
+  state               = "ENABLED"
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
+}
+
+resource "aws_cloudwatch_event_target" "morning_target_mar" {
+  rule      = aws_cloudwatch_event_rule.morning_schedule_mar.name
+  target_id = "MorningConfigTargetMar"
+  arn       = aws_lambda_function.morning_config.arn
+}
+
+resource "aws_lambda_permission" "morning_eventbridge_mar" {
+  statement_id  = "AllowExecutionFromEventBridgeMar"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.morning_config.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.morning_schedule_mar.arn
+}
+
 # EventBridge rule for morning schedule during CST (Standard Time)
 # 6:45 AM CST = 12:45 PM UTC
-# Active from 1st Sunday in November to 2nd Sunday in March
+# Active from mid-November to early March (excluding transition weeks)
 resource "aws_cloudwatch_event_rule" "morning_schedule_cst" {
   name                = "netzero-morning-schedule-cst"
   description         = "Trigger morning Tesla configuration at 6:45 AM CST (Standard Time)"
@@ -260,11 +289,12 @@ resource "aws_lambda_permission" "evening_eventbridge_cdt" {
 }
 
 # EventBridge rule for evening schedule during November (transition month)
-# Covers both CDT and CST for November
+# Covers both CDT and CST only for first week of November (DST transition)
+# Day 1-7 of November to catch the first Sunday transition
 resource "aws_cloudwatch_event_rule" "evening_schedule_nov" {
   name                = "netzero-evening-schedule-nov"
-  description         = "Trigger evening Tesla configuration at 9:15 PM during November transition"
-  schedule_expression = "cron(15 2,3 ? 11 * *)"
+  description         = "Trigger evening Tesla configuration at 9:15 PM during November DST transition week"
+  schedule_expression = "cron(15 2,3 1-7 11 ? *)"
   state               = "ENABLED"
 
   lifecycle {
@@ -286,9 +316,37 @@ resource "aws_lambda_permission" "evening_eventbridge_nov" {
   source_arn    = aws_cloudwatch_event_rule.evening_schedule_nov.arn
 }
 
+# EventBridge rule for evening schedule during March (DST start transition)
+# Covers both CDT and CST only for second week of March (DST starts 2nd Sunday)
+# Day 8-14 of March to catch the second Sunday transition
+resource "aws_cloudwatch_event_rule" "evening_schedule_mar" {
+  name                = "netzero-evening-schedule-mar"
+  description         = "Trigger evening Tesla configuration at 9:15 PM during March DST start transition week"
+  schedule_expression = "cron(15 2,3 8-14 3 ? *)"
+  state               = "ENABLED"
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
+}
+
+resource "aws_cloudwatch_event_target" "evening_target_mar" {
+  rule      = aws_cloudwatch_event_rule.evening_schedule_mar.name
+  target_id = "EveningConfigTargetMar"
+  arn       = aws_lambda_function.evening_config.arn
+}
+
+resource "aws_lambda_permission" "evening_eventbridge_mar" {
+  statement_id  = "AllowExecutionFromEventBridgeMar"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.evening_config.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.evening_schedule_mar.arn
+}
+
 # EventBridge rule for evening schedule during CST (Standard Time)
 # 9:15 PM CST = 3:15 AM UTC (next day)
-# Active from 1st Sunday in November to 2nd Sunday in March
+# Active from mid-November to early March (excluding transition weeks)
 resource "aws_cloudwatch_event_rule" "evening_schedule_cst" {
   name                = "netzero-evening-schedule-cst"
   description         = "Trigger evening Tesla configuration at 9:15 PM CST (Standard Time)"
