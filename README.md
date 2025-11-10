@@ -6,8 +6,10 @@ Automated Tesla energy management using AWS Lambda and the NetZero Developer API
 
 This project provides two scheduled Lambda functions that automatically configure your Tesla energy system:
 
-- **Morning Job (6:45 AM CDT daily)**: Sets backup reserve to 20%, autonomous mode, battery exports enabled, grid charging disabled
-- **Evening Job (9:15 PM CDT daily)**: Sets backup reserve to 100%, autonomous mode, solar-only exports, grid charging enabled
+- **Morning Job (6:45 AM Central Time daily)**: Sets backup reserve to 20%, autonomous mode, battery exports enabled, grid charging disabled
+- **Evening Job (9:15 PM Central Time daily)**: Sets backup reserve to 100%, autonomous mode, solar-only exports, grid charging enabled
+
+**Daylight Saving Time Support**: The scheduler automatically adjusts between CDT (Central Daylight Time) and CST (Central Standard Time) to ensure jobs run at the correct local time year-round.
 
 ## 🏆 Features
 
@@ -110,17 +112,27 @@ aws lambda invoke --function-name netzero-evening-config --payload '{}' response
 
 ## Configuration Details
 
-### Morning Configuration (6:45 AM CDT)
+### Morning Configuration (6:45 AM Central Time)
 - Backup Reserve: 20%
 - Operational Mode: Autonomous
 - Energy Exports: Battery OK (solar and battery)
 - Grid Charging: Disabled
 
-### Evening Configuration (9:15 PM CDT)
+### Evening Configuration (9:15 PM Central Time)
 - Backup Reserve: 100%
-- Operational Mode: Autonomous  
+- Operational Mode: Autonomous
 - Energy Exports: Solar Only
 - Grid Charging: Enabled
+
+### Daylight Saving Time Handling
+
+The system automatically handles DST transitions using multiple EventBridge rules:
+
+- **CDT Period (March-October)**: Schedules trigger at 11:45 AM UTC (morning) and 2:15 AM UTC (evening)
+- **CST Period (November-February)**: Schedules trigger at 12:45 PM UTC (morning) and 3:15 AM UTC (evening)
+- **November Transition**: Special rules cover both time zones during the DST transition month
+
+This ensures your Tesla system is configured at exactly 6:45 AM and 9:15 PM Houston local time throughout the year, regardless of daylight saving time changes.
 
 ## Monitoring
 

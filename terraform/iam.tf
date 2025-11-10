@@ -1,0 +1,116 @@
+# IAM policy for GitHub Actions user
+# This policy grants permissions needed for Terraform to manage the infrastructure
+# Note: This user was created manually and is being imported into Terraform
+
+resource "aws_iam_user_policy" "github_actions_policy" {
+  name = "GitHubActionsPolicy"
+  user = "netzero-github-actions"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "LambdaFunctionManagement"
+        Effect = "Allow"
+        Action = [
+          "lambda:CreateFunction",
+          "lambda:UpdateFunctionCode",
+          "lambda:UpdateFunctionConfiguration",
+          "lambda:GetFunction",
+          "lambda:AddPermission",
+          "lambda:RemovePermission",
+          "lambda:ListVersionsByFunction",
+          "lambda:GetFunctionCodeSigningConfig",
+          "lambda:GetPolicy"
+        ]
+        Resource = [
+          "arn:aws:lambda:us-east-1:358870220937:function:netzero-*",
+          "arn:aws:lambda:us-east-1:358870220937:code-signing-config/*"
+        ]
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion" = "us-east-1"
+          }
+        }
+      },
+      {
+        Sid    = "EventBridgeRuleManagement"
+        Effect = "Allow"
+        Action = [
+          "events:PutRule",
+          "events:DeleteRule",
+          "events:PutTargets",
+          "events:RemoveTargets",
+          "events:DescribeRule",
+          "events:ListTagsForResource",
+          "events:TagResource",
+          "events:UntagResource",
+          "events:ListTargetsByRule"
+        ]
+        Resource = ["arn:aws:events:us-east-1:358870220937:rule/netzero-*"]
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion" = "us-east-1"
+          }
+        }
+      },
+      {
+        Sid    = "IAMRoleManagement"
+        Effect = "Allow"
+        Action = [
+          "iam:GetRole",
+          "iam:PassRole",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies"
+        ]
+        Resource = ["arn:aws:iam::358870220937:role/netzero-*"]
+      },
+      {
+        Sid    = "IAMUserPolicyManagement"
+        Effect = "Allow"
+        Action = [
+          "iam:GetUserPolicy",
+          "iam:PutUserPolicy"
+        ]
+        Resource = ["arn:aws:iam::358870220937:user/netzero-github-actions"]
+      },
+      {
+        Sid    = "CloudWatchLogsManagement"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:DescribeLogGroups"
+        ]
+        Resource = ["arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"]
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion" = "us-east-1"
+          }
+        }
+      },
+      {
+        Sid    = "TerraformStateManagement"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"]
+      },
+      {
+        Sid      = "TerraformStateBucketList"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937"]
+        Condition = {
+          StringLike = {
+            "s3:prefix" = "terraform.tfstate"
+          }
+        }
+      }
+    ]
+  })
+}
