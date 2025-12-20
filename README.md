@@ -128,11 +128,12 @@ aws lambda invoke --function-name netzero-evening-config --payload '{}' response
 
 The system automatically handles DST transitions using multiple EventBridge rules:
 
-- **CDT Period (March-October)**: Schedules trigger at 11:45 AM UTC (morning) and 2:15 AM UTC (evening)
-- **CST Period (November-February)**: Schedules trigger at 12:45 PM UTC (morning) and 3:15 AM UTC (evening)
-- **November Transition**: Special rules cover both time zones during the DST transition month
+- **CDT Period (March 15-October 31)**: Schedules trigger at 11:45 AM UTC (morning) and 2:15 AM UTC (evening)
+- **CST Period (November 8-February 28/29)**: Schedules trigger at 12:45 PM UTC (morning) and 3:15 AM UTC (evening)
+- **March Transition Week (Days 8-14)**: Both UTC times trigger to cover the second Sunday when DST starts
+- **November Transition Week (Days 1-7)**: Both UTC times trigger to cover the first Sunday when DST ends
 
-This ensures your Tesla system is configured at exactly 6:45 AM and 9:15 PM Houston local time throughout the year, regardless of daylight saving time changes.
+This ensures your Tesla system is configured at exactly 6:45 AM and 9:15 PM Houston local time throughout the year, regardless of daylight saving time changes. During DST transition weeks, the job may run twice, but only the correct local time execution will apply the configuration.
 
 ## Monitoring
 
