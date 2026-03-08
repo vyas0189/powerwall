@@ -34,20 +34,18 @@ resource "aws_iam_user_policy" "github_actions_policy" {
         }
       },
       {
-        Sid    = "EventBridgeRuleManagement"
+        Sid    = "SchedulerManagement"
         Effect = "Allow"
         Action = [
-          "events:PutRule",
-          "events:DeleteRule",
-          "events:PutTargets",
-          "events:RemoveTargets",
-          "events:DescribeRule",
-          "events:ListTagsForResource",
-          "events:TagResource",
-          "events:UntagResource",
-          "events:ListTargetsByRule"
+          "scheduler:CreateSchedule",
+          "scheduler:DeleteSchedule",
+          "scheduler:GetSchedule",
+          "scheduler:UpdateSchedule",
+          "scheduler:ListTagsForResource",
+          "scheduler:TagResource",
+          "scheduler:UntagResource"
         ]
-        Resource = ["arn:aws:events:us-east-1:358870220937:rule/netzero-*"]
+        Resource = ["arn:aws:scheduler:us-east-1:358870220937:schedule/default/netzero-*"]
         Condition = {
           StringEquals = {
             "aws:RequestedRegion" = "us-east-1"
@@ -64,6 +62,16 @@ resource "aws_iam_user_policy" "github_actions_policy" {
           "iam:DetachRolePolicy",
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies"
+        ]
+        Resource = ["arn:aws:iam::358870220937:role/netzero-*"]
+      },
+      {
+        Sid    = "IAMRolePolicyManagement"
+        Effect = "Allow"
+        Action = [
+          "iam:GetRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy"
         ]
         Resource = ["arn:aws:iam::358870220937:role/netzero-*"]
       },
@@ -110,6 +118,70 @@ resource "aws_iam_user_policy" "github_actions_policy" {
             "s3:prefix" = "terraform.tfstate"
           }
         }
+      }
+    ]
+  })
+}
+
+# IAM role for Lambda functions
+resource "aws_iam_role" "lambda_role" {
+  name = "netzero-lambda-role"
+
+  lifecycle {
+    ignore_changes = [name]
+  }
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = aws_iam_role.lambda_role.name
+}
+
+# IAM role for EventBridge Scheduler to invoke Lambda
+resource "aws_iam_role" "scheduler_role" {
+  name = "netzero-scheduler-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "scheduler.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "scheduler_invoke_lambda" {
+  name = "netzero-scheduler-invoke-lambda"
+  role = aws_iam_role.scheduler_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "lambda:InvokeFunction"
+        Resource = [
+          aws_lambda_function.morning_config.arn,
+          aws_lambda_function.evening_config.arn
+        ]
       }
     ]
   })
