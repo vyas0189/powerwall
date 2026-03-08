@@ -10,7 +10,6 @@ resource "aws_iam_user_policy" "github_actions_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "LambdaFunctionManagement"
         Effect = "Allow"
         Action = [
           "lambda:CreateFunction",
@@ -23,93 +22,113 @@ resource "aws_iam_user_policy" "github_actions_policy" {
           "lambda:GetFunctionCodeSigningConfig",
           "lambda:GetPolicy"
         ]
-        Resource = [
-          "arn:aws:lambda:us-east-1:358870220937:function:netzero-*",
-          "arn:aws:lambda:us-east-1:358870220937:code-signing-config/*"
-        ]
-        Condition = {
-          StringEquals = {
-            "aws:RequestedRegion" = "us-east-1"
-          }
-        }
+        Resource = "arn:aws:lambda:us-east-1:358870220937:function:netzero-*"
       },
       {
-        Sid    = "EventBridgeRuleManagement"
-        Effect = "Allow"
-        Action = [
-          "events:PutRule",
-          "events:DeleteRule",
-          "events:PutTargets",
-          "events:RemoveTargets",
-          "events:DescribeRule",
-          "events:ListTagsForResource",
-          "events:TagResource",
-          "events:UntagResource",
-          "events:ListTargetsByRule"
-        ]
-        Resource = ["arn:aws:events:us-east-1:358870220937:rule/netzero-*"]
-        Condition = {
-          StringEquals = {
-            "aws:RequestedRegion" = "us-east-1"
-          }
-        }
+        Effect   = "Allow"
+        Action   = ["scheduler:CreateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule", "scheduler:UpdateSchedule"]
+        Resource = "arn:aws:scheduler:us-east-1:358870220937:schedule/default/netzero-*"
       },
       {
-        Sid    = "IAMRoleManagement"
         Effect = "Allow"
         Action = [
           "iam:GetRole",
+          "iam:CreateRole",
           "iam:PassRole",
           "iam:AttachRolePolicy",
           "iam:DetachRolePolicy",
           "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies"
+          "iam:ListAttachedRolePolicies",
+          "iam:GetRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy"
         ]
-        Resource = ["arn:aws:iam::358870220937:role/netzero-*"]
+        Resource = "arn:aws:iam::358870220937:role/netzero-*"
       },
       {
-        Sid    = "IAMUserPolicyManagement"
-        Effect = "Allow"
-        Action = [
-          "iam:GetUserPolicy",
-          "iam:PutUserPolicy"
-        ]
-        Resource = ["arn:aws:iam::358870220937:user/netzero-github-actions"]
-      },
-      {
-        Sid    = "CloudWatchLogsManagement"
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:DescribeLogGroups"
-        ]
-        Resource = ["arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"]
-        Condition = {
-          StringEquals = {
-            "aws:RequestedRegion" = "us-east-1"
-          }
-        }
-      },
-      {
-        Sid    = "TerraformStateManagement"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"]
-      },
-      {
-        Sid      = "TerraformStateBucketList"
         Effect   = "Allow"
-        Action   = ["s3:ListBucket"]
-        Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937"]
-        Condition = {
-          StringLike = {
-            "s3:prefix" = "terraform.tfstate"
-          }
+        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy"]
+        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
+        Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
+      }
+    ]
+  })
+}
+
+# IAM role for Lambda functions
+resource "aws_iam_role" "lambda_role" {
+  name = "netzero-lambda-role"
+
+  lifecycle {
+    ignore_changes = [name]
+  }
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
         }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = aws_iam_role.lambda_role.name
+}
+
+# IAM role for EventBridge Scheduler to invoke Lambda
+resource "aws_iam_role" "scheduler_role" {
+  name       = "netzero-scheduler-role"
+  depends_on = [aws_iam_user_policy.github_actions_policy]
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "scheduler.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "scheduler_invoke_lambda" {
+  name = "netzero-scheduler-invoke-lambda"
+  role = aws_iam_role.scheduler_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "lambda:InvokeFunction"
+        Resource = [
+          aws_lambda_function.morning_config.arn,
+          aws_lambda_function.evening_config.arn
+        ]
       }
     ]
   })
