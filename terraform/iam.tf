@@ -98,7 +98,8 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 
 # IAM role for EventBridge Scheduler to invoke Lambda
 resource "aws_iam_role" "scheduler_role" {
-  name = "netzero-scheduler-role"
+  name       = "netzero-scheduler-role"
+  depends_on = [aws_iam_user_policy.github_actions_policy]
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
