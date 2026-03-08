@@ -74,13 +74,10 @@ Check the Actions tab in your GitHub repository to monitor deployment progress a
 ### Terraform (Local)
 
 ```bash
-export API_KEY="your_netzero_api_key"
-export SITE_ID="your_tesla_site_id"
-
 cd terraform
 terraform init
-terraform plan -var="api_key=$API_KEY" -var="site_id=$SITE_ID"
-terraform apply -var="api_key=$API_KEY" -var="site_id=$SITE_ID"
+terraform plan -var="api_key=$NET_ZERO_API_KEY" -var="site_id=$NET_ZERO_SITE_ID" -out=tfplan
+terraform apply tfplan
 ```
 
 

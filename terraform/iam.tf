@@ -10,7 +10,6 @@ resource "aws_iam_user_policy" "github_actions_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "LambdaFunctionManagement"
         Effect = "Allow"
         Action = [
           "lambda:CreateFunction",
@@ -23,101 +22,48 @@ resource "aws_iam_user_policy" "github_actions_policy" {
           "lambda:GetFunctionCodeSigningConfig",
           "lambda:GetPolicy"
         ]
-        Resource = [
-          "arn:aws:lambda:us-east-1:358870220937:function:netzero-*",
-          "arn:aws:lambda:us-east-1:358870220937:code-signing-config/*"
-        ]
-        Condition = {
-          StringEquals = {
-            "aws:RequestedRegion" = "us-east-1"
-          }
-        }
+        Resource = "arn:aws:lambda:us-east-1:358870220937:function:netzero-*"
       },
       {
-        Sid    = "SchedulerManagement"
-        Effect = "Allow"
-        Action = [
-          "scheduler:CreateSchedule",
-          "scheduler:DeleteSchedule",
-          "scheduler:GetSchedule",
-          "scheduler:UpdateSchedule",
-          "scheduler:ListTagsForResource",
-          "scheduler:TagResource",
-          "scheduler:UntagResource"
-        ]
-        Resource = ["arn:aws:scheduler:us-east-1:358870220937:schedule/default/netzero-*"]
-        Condition = {
-          StringEquals = {
-            "aws:RequestedRegion" = "us-east-1"
-          }
-        }
+        Effect   = "Allow"
+        Action   = ["scheduler:CreateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule", "scheduler:UpdateSchedule"]
+        Resource = "arn:aws:scheduler:us-east-1:358870220937:schedule/default/netzero-*"
       },
       {
-        Sid    = "IAMRoleManagement"
         Effect = "Allow"
         Action = [
           "iam:GetRole",
+          "iam:CreateRole",
           "iam:PassRole",
           "iam:AttachRolePolicy",
           "iam:DetachRolePolicy",
           "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies"
-        ]
-        Resource = ["arn:aws:iam::358870220937:role/netzero-*"]
-      },
-      {
-        Sid    = "IAMRolePolicyManagement"
-        Effect = "Allow"
-        Action = [
+          "iam:ListAttachedRolePolicies",
           "iam:GetRolePolicy",
           "iam:PutRolePolicy",
           "iam:DeleteRolePolicy"
         ]
-        Resource = ["arn:aws:iam::358870220937:role/netzero-*"]
+        Resource = "arn:aws:iam::358870220937:role/netzero-*"
       },
       {
-        Sid    = "IAMUserPolicyManagement"
-        Effect = "Allow"
-        Action = [
-          "iam:GetUserPolicy",
-          "iam:PutUserPolicy"
-        ]
-        Resource = ["arn:aws:iam::358870220937:user/netzero-github-actions"]
-      },
-      {
-        Sid    = "CloudWatchLogsManagement"
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:DescribeLogGroups"
-        ]
-        Resource = ["arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"]
-        Condition = {
-          StringEquals = {
-            "aws:RequestedRegion" = "us-east-1"
-          }
-        }
-      },
-      {
-        Sid    = "TerraformStateManagement"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"]
-      },
-      {
-        Sid      = "TerraformStateBucketList"
         Effect   = "Allow"
-        Action   = ["s3:ListBucket"]
-        Resource = ["arn:aws:s3:::netzero-terraform-state-358870220937"]
-        Condition = {
-          StringLike = {
-            "s3:prefix" = "terraform.tfstate"
-          }
-        }
+        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy"]
+        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
+        Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
       }
     ]
   })
