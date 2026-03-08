@@ -148,54 +148,77 @@ resource "null_resource" "evening_package" {
   }
 }
 
-# EventBridge rule for morning schedule (6:45 AM CDT = 11:45 AM UTC)
-resource "aws_cloudwatch_event_rule" "morning_schedule" {
-  name                = "netzero-morning-schedule"
-  description         = "Trigger morning Tesla configuration at 6:45 AM CDT daily"
-  schedule_expression = "cron(45 12 * * ? *)"
+# IAM role for EventBridge Scheduler to invoke Lambda
+resource "aws_iam_role" "scheduler_role" {
+  name = "netzero-scheduler-role"
 
-  lifecycle {
-    ignore_changes = [tags]
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "scheduler.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "scheduler_invoke_lambda" {
+  name = "netzero-scheduler-invoke-lambda"
+  role = aws_iam_role.scheduler_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "lambda:InvokeFunction"
+        Resource = [
+          aws_lambda_function.morning_config.arn,
+          aws_lambda_function.evening_config.arn
+        ]
+      }
+    ]
+  })
+}
+
+# EventBridge Scheduler for morning schedule (6:45 AM CST/CDT - DST handled automatically)
+resource "aws_scheduler_schedule" "morning_schedule" {
+  name        = "netzero-morning-schedule"
+  description = "Trigger morning Tesla configuration at 6:45 AM CST/CDT daily"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  schedule_expression          = "cron(45 6 * * ? *)"
+  schedule_expression_timezone = "America/Chicago"
+
+  target {
+    arn      = aws_lambda_function.morning_config.arn
+    role_arn = aws_iam_role.scheduler_role.arn
   }
 }
 
-resource "aws_cloudwatch_event_target" "morning_target" {
-  rule      = aws_cloudwatch_event_rule.morning_schedule.name
-  target_id = "MorningConfigTarget"
-  arn       = aws_lambda_function.morning_config.arn
-}
+# EventBridge Scheduler for evening schedule (9:15 PM CST/CDT - DST handled automatically)
+resource "aws_scheduler_schedule" "evening_schedule" {
+  name        = "netzero-evening-schedule"
+  description = "Trigger evening Tesla configuration at 9:15 PM CST/CDT daily"
 
-resource "aws_lambda_permission" "morning_eventbridge" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.morning_config.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.morning_schedule.arn
-}
-
-# EventBridge rule for evening schedule (9:15 PM CDT = 2:15 AM UTC next day)
-resource "aws_cloudwatch_event_rule" "evening_schedule" {
-  name                = "netzero-evening-schedule"
-  description         = "Trigger evening Tesla configuration at 9:15 PM CDT daily"
-  schedule_expression = "cron(15 3 * * ? *)"
-
-  lifecycle {
-    ignore_changes = [tags]
+  flexible_time_window {
+    mode = "OFF"
   }
-}
 
-resource "aws_cloudwatch_event_target" "evening_target" {
-  rule      = aws_cloudwatch_event_rule.evening_schedule.name
-  target_id = "EveningConfigTarget"
-  arn       = aws_lambda_function.evening_config.arn
-}
+  schedule_expression          = "cron(15 21 * * ? *)"
+  schedule_expression_timezone = "America/Chicago"
 
-resource "aws_lambda_permission" "evening_eventbridge" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.evening_config.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.evening_schedule.arn
+  target {
+    arn      = aws_lambda_function.evening_config.arn
+    role_arn = aws_iam_role.scheduler_role.arn
+  }
 }
 
 # Outputs
@@ -205,4 +228,12 @@ output "morning_lambda_arn" {
 
 output "evening_lambda_arn" {
   value = aws_lambda_function.evening_config.arn
+}
+
+output "morning_schedule_arn" {
+  value = aws_scheduler_schedule.morning_schedule.arn
+}
+
+output "evening_schedule_arn" {
+  value = aws_scheduler_schedule.evening_schedule.arn
 }
