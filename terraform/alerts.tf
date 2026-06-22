@@ -1,6 +1,9 @@
 # SNS topic for failure alerts
 resource "aws_sns_topic" "alerts" {
   name = "netzero-alerts"
+
+  # Ensure the deploy user's SNS permissions exist before creating the topic
+  depends_on = [aws_iam_user_policy.github_actions_alerting_policy]
 }
 
 # Email subscription. AWS sends a confirmation email to this address; the
@@ -17,6 +20,9 @@ resource "aws_sns_topic_subscription" "alerts_email" {
 resource "aws_sqs_queue" "scheduler_dlq" {
   name                      = "netzero-scheduler-dlq"
   message_retention_seconds = 1209600 # 14 days (max)
+
+  # Ensure the deploy user's SQS permissions exist before creating the queue
+  depends_on = [aws_iam_user_policy.github_actions_alerting_policy]
 }
 
 # Allow EventBridge Scheduler (via the scheduler role) to send dead-letter
@@ -64,6 +70,8 @@ resource "aws_cloudwatch_metric_alarm" "morning_errors" {
 
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
+
+  depends_on = [aws_iam_user_policy.github_actions_alerting_policy]
 }
 
 # CloudWatch alarm on evening Lambda errors -> SNS email alert
@@ -85,4 +93,6 @@ resource "aws_cloudwatch_metric_alarm" "evening_errors" {
 
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
+
+  depends_on = [aws_iam_user_policy.github_actions_alerting_policy]
 }

@@ -32,6 +32,56 @@ resource "aws_iam_user_policy" "github_actions_policy" {
       {
         Effect = "Allow"
         Action = [
+          "iam:GetRole",
+          "iam:CreateRole",
+          "iam:PassRole",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:GetRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy"
+        ]
+        Resource = "arn:aws:iam::358870220937:role/netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy"]
+        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
+        Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
+      }
+    ]
+  })
+}
+
+# Separate inline policy for alerting/retry infrastructure (SNS, SQS, CloudWatch).
+# Kept separate from GitHubActionsPolicy because a single inline user policy is
+# capped at 2048 bytes; each named inline policy gets its own budget.
+resource "aws_iam_user_policy" "github_actions_alerting_policy" {
+  name = "GitHubActionsAlertingPolicy"
+  user = "netzero-github-actions"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
           "sns:CreateTopic",
           "sns:DeleteTopic",
           "sns:GetTopicAttributes",
@@ -71,42 +121,6 @@ resource "aws_iam_user_policy" "github_actions_policy" {
           "cloudwatch:UntagResource"
         ]
         Resource = "arn:aws:cloudwatch:us-east-1:358870220937:alarm:netzero-*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "iam:GetRole",
-          "iam:CreateRole",
-          "iam:PassRole",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies",
-          "iam:GetRolePolicy",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy"
-        ]
-        Resource = "arn:aws:iam::358870220937:role/netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy"]
-        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
-        Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
-      },
-      {
-        Effect   = "Allow"
-        Action   = "s3:ListBucket"
-        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
       }
     ]
   })
