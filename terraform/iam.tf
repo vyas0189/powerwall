@@ -6,6 +6,10 @@ resource "aws_iam_user_policy" "github_actions_policy" {
   name = "GitHubActionsPolicy"
   user = "netzero-github-actions"
 
+  # NOTE: AWS caps the *aggregate* size of all inline policies on a user at 2048
+  # bytes, so this must remain a single inline policy. To keep the alerting
+  # resources (SNS/SQS/CloudWatch) within that budget their actions use
+  # service-level wildcards, tightly scoped to netzero-* ARNs.
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -28,6 +32,21 @@ resource "aws_iam_user_policy" "github_actions_policy" {
         Effect   = "Allow"
         Action   = ["scheduler:CreateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule", "scheduler:UpdateSchedule"]
         Resource = "arn:aws:scheduler:us-east-1:358870220937:schedule/default/netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "sns:*"
+        Resource = "arn:aws:sns:us-east-1:358870220937:netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "sqs:*"
+        Resource = "arn:aws:sqs:us-east-1:358870220937:netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "cloudwatch:*"
+        Resource = "arn:aws:cloudwatch:us-east-1:358870220937:alarm:netzero-*"
       },
       {
         Effect = "Allow"
@@ -64,63 +83,6 @@ resource "aws_iam_user_policy" "github_actions_policy" {
         Effect   = "Allow"
         Action   = "s3:ListBucket"
         Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
-      }
-    ]
-  })
-}
-
-# Separate inline policy for alerting/retry infrastructure (SNS, SQS, CloudWatch).
-# Kept separate from GitHubActionsPolicy because a single inline user policy is
-# capped at 2048 bytes; each named inline policy gets its own budget.
-resource "aws_iam_user_policy" "github_actions_alerting_policy" {
-  name = "GitHubActionsAlertingPolicy"
-  user = "netzero-github-actions"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "sns:CreateTopic",
-          "sns:DeleteTopic",
-          "sns:GetTopicAttributes",
-          "sns:SetTopicAttributes",
-          "sns:Subscribe",
-          "sns:Unsubscribe",
-          "sns:ListSubscriptionsByTopic",
-          "sns:GetSubscriptionAttributes",
-          "sns:ListTagsForResource",
-          "sns:TagResource",
-          "sns:UntagResource"
-        ]
-        Resource = "arn:aws:sns:us-east-1:358870220937:netzero-*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:CreateQueue",
-          "sqs:DeleteQueue",
-          "sqs:GetQueueAttributes",
-          "sqs:SetQueueAttributes",
-          "sqs:GetQueueUrl",
-          "sqs:ListQueueTags",
-          "sqs:TagQueue",
-          "sqs:UntagQueue"
-        ]
-        Resource = "arn:aws:sqs:us-east-1:358870220937:netzero-*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "cloudwatch:PutMetricAlarm",
-          "cloudwatch:DeleteAlarms",
-          "cloudwatch:DescribeAlarms",
-          "cloudwatch:ListTagsForResource",
-          "cloudwatch:TagResource",
-          "cloudwatch:UntagResource"
-        ]
-        Resource = "arn:aws:cloudwatch:us-east-1:358870220937:alarm:netzero-*"
       }
     ]
   })
