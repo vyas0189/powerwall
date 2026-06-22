@@ -5,7 +5,7 @@ resource "aws_lambda_function" "morning_config" {
   role             = aws_iam_role.lambda_role.arn
   handler          = "morning_config.lambda_handler"
   runtime          = "python3.12"
-  timeout          = 30
+  timeout          = 60
   source_code_hash = base64sha256("${filemd5("${path.module}/../morning_config.py")}-${filemd5("${path.module}/../requirements.txt")}")
 
   environment {
@@ -25,7 +25,7 @@ resource "aws_lambda_function" "evening_config" {
   role             = aws_iam_role.lambda_role.arn
   handler          = "evening_config.lambda_handler"
   runtime          = "python3.12"
-  timeout          = 30
+  timeout          = 60
   source_code_hash = base64sha256("${filemd5("${path.module}/../evening_config.py")}-${filemd5("${path.module}/../requirements.txt")}")
 
   environment {

@@ -32,6 +32,49 @@ resource "aws_iam_user_policy" "github_actions_policy" {
       {
         Effect = "Allow"
         Action = [
+          "sns:CreateTopic",
+          "sns:DeleteTopic",
+          "sns:GetTopicAttributes",
+          "sns:SetTopicAttributes",
+          "sns:Subscribe",
+          "sns:Unsubscribe",
+          "sns:ListSubscriptionsByTopic",
+          "sns:GetSubscriptionAttributes",
+          "sns:ListTagsForResource",
+          "sns:TagResource",
+          "sns:UntagResource"
+        ]
+        Resource = "arn:aws:sns:us-east-1:358870220937:netzero-*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:CreateQueue",
+          "sqs:DeleteQueue",
+          "sqs:GetQueueAttributes",
+          "sqs:SetQueueAttributes",
+          "sqs:GetQueueUrl",
+          "sqs:ListQueueTags",
+          "sqs:TagQueue",
+          "sqs:UntagQueue"
+        ]
+        Resource = "arn:aws:sqs:us-east-1:358870220937:netzero-*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricAlarm",
+          "cloudwatch:DeleteAlarms",
+          "cloudwatch:DescribeAlarms",
+          "cloudwatch:ListTagsForResource",
+          "cloudwatch:TagResource",
+          "cloudwatch:UntagResource"
+        ]
+        Resource = "arn:aws:cloudwatch:us-east-1:358870220937:alarm:netzero-*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "iam:GetRole",
           "iam:CreateRole",
           "iam:PassRole",
@@ -129,6 +172,11 @@ resource "aws_iam_role_policy" "scheduler_invoke_lambda" {
           aws_lambda_function.morning_config.arn,
           aws_lambda_function.evening_config.arn
         ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.scheduler_dlq.arn
       }
     ]
   })

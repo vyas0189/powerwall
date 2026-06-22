@@ -13,6 +13,15 @@ resource "aws_scheduler_schedule" "morning_schedule" {
   target {
     arn      = aws_lambda_function.morning_config.arn
     role_arn = aws_iam_role.scheduler_role.arn
+
+    retry_policy {
+      maximum_retry_attempts       = 2
+      maximum_event_age_in_seconds = 3600
+    }
+
+    dead_letter_config {
+      arn = aws_sqs_queue.scheduler_dlq.arn
+    }
   }
 }
 
@@ -31,5 +40,14 @@ resource "aws_scheduler_schedule" "evening_schedule" {
   target {
     arn      = aws_lambda_function.evening_config.arn
     role_arn = aws_iam_role.scheduler_role.arn
+
+    retry_policy {
+      maximum_retry_attempts       = 2
+      maximum_event_age_in_seconds = 3600
+    }
+
+    dead_letter_config {
+      arn = aws_sqs_queue.scheduler_dlq.arn
+    }
   }
 }
