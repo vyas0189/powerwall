@@ -14,3 +14,9 @@ variable "site_id" {
   description = "Tesla site ID"
   type        = string
 }
+
+variable "alert_email" {
+  description = "Email address that receives failure alerts for the Lambda jobs"
+  type        = string
+  default     = "vyas0189@gmail.com"
+}

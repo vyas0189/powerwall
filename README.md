@@ -132,6 +132,32 @@ The system automatically handles DST transitions using multiple EventBridge rule
 
 This ensures your Tesla system is configured at exactly 6:45 AM and 9:15 PM Houston local time throughout the year, regardless of daylight saving time changes. During DST transition weeks, the job may run twice, but only the correct local time execution will apply the configuration.
 
+## Reliability & Alerting
+
+### Retry
+
+Failures of the NetZero API call are retried at two layers:
+
+- **In-code retry**: each Lambda retries the API request up to 3 times with
+  exponential backoff (2s, 4s) to ride out transient errors within a single run.
+- **Scheduler retry**: if the Lambda invocation still fails, EventBridge
+  Scheduler retries the invocation (up to 2 attempts, within a 1-hour window).
+
+Runs that exhaust all retries are sent to an SQS **dead-letter queue**
+(`netzero-scheduler-dlq`, 14-day retention) for inspection or replay.
+
+### Failure alerts
+
+A CloudWatch alarm on each Lambda's `Errors` metric publishes to the
+`netzero-alerts` SNS topic, which emails `var.alert_email` (defaults to the
+project owner). You also receive a recovery ("OK") notification when the next
+run succeeds.
+
+> **One-time setup:** After the first deploy, AWS sends a subscription
+> confirmation email to the alert address. **You must click the confirmation
+> link** before any alerts are delivered. Override the address with
+> `-var="alert_email=you@example.com"`.
+
 ## Monitoring
 
 View logs in AWS CloudWatch:
