@@ -1,9 +1,24 @@
+# Give IAM time to propagate the deploy user's SNS/SQS/CloudWatch grants before
+# any resource that needs them is created. Without this, a fresh apply can fire
+# CreateTopic/CreateQueue within ~1s of the policy update and get a 403 because
+# the grant hasn't propagated yet (IAM is eventually consistent).
+resource "time_sleep" "wait_for_iam_propagation" {
+  depends_on      = [aws_iam_user_policy.github_actions_policy]
+  create_duration = "30s"
+
+  # Re-wait whenever the policy document changes, so future permission additions
+  # get the same propagation grace period.
+  triggers = {
+    policy = aws_iam_user_policy.github_actions_policy.policy
+  }
+}
+
 # SNS topic for failure alerts
 resource "aws_sns_topic" "alerts" {
   name = "netzero-alerts"
 
-  # Ensure the deploy user's SNS permissions exist before creating the topic
-  depends_on = [aws_iam_user_policy.github_actions_policy]
+  # Wait for the deploy user's SNS permissions to propagate before creating
+  depends_on = [time_sleep.wait_for_iam_propagation]
 }
 
 # Email subscription. AWS sends a confirmation email to this address; the
@@ -21,8 +36,8 @@ resource "aws_sqs_queue" "scheduler_dlq" {
   name                      = "netzero-scheduler-dlq"
   message_retention_seconds = 1209600 # 14 days (max)
 
-  # Ensure the deploy user's SQS permissions exist before creating the queue
-  depends_on = [aws_iam_user_policy.github_actions_policy]
+  # Wait for the deploy user's SQS permissions to propagate before creating
+  depends_on = [time_sleep.wait_for_iam_propagation]
 }
 
 # Allow EventBridge Scheduler (via the scheduler role) to send dead-letter
@@ -71,7 +86,7 @@ resource "aws_cloudwatch_metric_alarm" "morning_errors" {
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
 
-  depends_on = [aws_iam_user_policy.github_actions_policy]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 }
 
 # CloudWatch alarm on evening Lambda errors -> SNS email alert
@@ -94,5 +109,5 @@ resource "aws_cloudwatch_metric_alarm" "evening_errors" {
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
 
-  depends_on = [aws_iam_user_policy.github_actions_policy]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 }
