@@ -78,8 +78,13 @@ jobs:
       run: terraform validate
     
     - name: Terraform Plan
+      # TEMPORARY: -refresh=false to recover from the half-applied IAM migration
+      # (operational perms were stripped from the inline policy before the managed
+      # policy was attached, so refresh can't read SNS/SQS). Remove once the deploy
+      # has healed and the netzero-deploy managed policy is attached.
       run: |
         terraform plan \
+          -refresh=false \
           -var="api_key=${{ secrets.API_KEY }}" \
           -var="site_id=${{ secrets.SITE_ID }}" \
           -out=tfplan
@@ -129,8 +134,11 @@ jobs:
       run: terraform init
     
     - name: Terraform Plan (Fresh)
+      # TEMPORARY: -refresh=false to recover from the half-applied IAM migration
+      # (see note in the Terraform Plan step above). Remove once healed.
       run: |
         terraform plan \
+          -refresh=false \
           -var="api_key=${{ secrets.API_KEY }}" \
           -var="site_id=${{ secrets.SITE_ID }}" \
           -out=fresh-tfplan
