@@ -1,15 +1,95 @@
-# IAM policy for GitHub Actions user
-# This policy grants permissions needed for Terraform to manage the infrastructure
-# Note: This user was created manually and is being imported into Terraform
-
+# Inline policy for the GitHub Actions deploy user — CONTROL PLANE only.
+#
+# The operational/data-plane permissions (Lambda, Scheduler, SNS, SQS,
+# CloudWatch, Logs) live in the customer-managed policy below, which has a
+# 6144-byte limit and so can spell out explicit, least-privilege actions
+# instead of the service wildcards an inline policy was forced to use (the
+# aggregate inline-policy budget for a user is only 2048 bytes).
+#
+# This inline policy intentionally retains the permissions needed to manage and
+# attach that managed policy, plus self-policy management, so the deploy user
+# can always recover from a half-applied change (it can never lock itself out).
 resource "aws_iam_user_policy" "github_actions_policy" {
   name = "GitHubActionsPolicy"
   user = "netzero-github-actions"
 
-  # NOTE: AWS caps the *aggregate* size of all inline policies on a user at 2048
-  # bytes, so this must remain a single inline policy. To keep the alerting
-  # resources (SNS/SQS/CloudWatch) within that budget their actions use
-  # service-level wildcards, tightly scoped to netzero-* ARNs.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:GetRole",
+          "iam:CreateRole",
+          "iam:PassRole",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:GetRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy"
+        ]
+        Resource = "arn:aws:iam::358870220937:role/netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy", "iam:ListAttachedUserPolicies"]
+        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:ListPolicyTags",
+          "iam:TagPolicy",
+          "iam:UntagPolicy"
+        ]
+        Resource = "arn:aws:iam::358870220937:policy/netzero-*"
+      },
+      {
+        # Limit attach/detach to netzero-* managed policies so the deploy user
+        # cannot escalate by attaching, e.g., AdministratorAccess to itself.
+        Effect   = "Allow"
+        Action   = ["iam:AttachUserPolicy", "iam:DetachUserPolicy"]
+        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
+        Condition = {
+          ArnLike = {
+            "iam:PolicyARN" = "arn:aws:iam::358870220937:policy/netzero-*"
+          }
+        }
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
+        Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
+      }
+    ]
+  })
+}
+
+# Customer-managed policy: the operational/data-plane permissions, explicit and
+# scoped to netzero-* resources. 6144-byte limit leaves room to avoid wildcards.
+resource "aws_iam_policy" "deploy" {
+  name        = "netzero-deploy"
+  description = "Operational deploy permissions for netzero infrastructure (Lambda, Scheduler, SNS, SQS, CloudWatch, Logs)."
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -34,58 +114,73 @@ resource "aws_iam_user_policy" "github_actions_policy" {
         Resource = "arn:aws:scheduler:us-east-1:358870220937:schedule/default/netzero-*"
       },
       {
-        Effect   = "Allow"
-        Action   = "sns:*"
+        Effect = "Allow"
+        Action = [
+          "sns:CreateTopic",
+          "sns:DeleteTopic",
+          "sns:GetTopicAttributes",
+          "sns:SetTopicAttributes",
+          "sns:Subscribe",
+          "sns:Unsubscribe",
+          "sns:ListSubscriptionsByTopic",
+          "sns:GetSubscriptionAttributes",
+          "sns:ListTagsForResource",
+          "sns:TagResource",
+          "sns:UntagResource"
+        ]
         Resource = "arn:aws:sns:us-east-1:358870220937:netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = "sqs:*"
-        Resource = "arn:aws:sqs:us-east-1:358870220937:netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = "cloudwatch:*"
-        Resource = "arn:aws:cloudwatch:us-east-1:358870220937:alarm:netzero-*"
       },
       {
         Effect = "Allow"
         Action = [
-          "iam:GetRole",
-          "iam:CreateRole",
-          "iam:PassRole",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies",
-          "iam:GetRolePolicy",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy"
+          "sqs:CreateQueue",
+          "sqs:DeleteQueue",
+          "sqs:GetQueueAttributes",
+          "sqs:SetQueueAttributes",
+          "sqs:GetQueueUrl",
+          "sqs:ListQueueTags",
+          "sqs:TagQueue",
+          "sqs:UntagQueue"
         ]
-        Resource = "arn:aws:iam::358870220937:role/netzero-*"
+        Resource = "arn:aws:sqs:us-east-1:358870220937:netzero-*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy"]
-        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricAlarm",
+          "cloudwatch:DeleteAlarms",
+          "cloudwatch:DescribeAlarms",
+          "cloudwatch:ListTagsForResource",
+          "cloudwatch:TagResource",
+          "cloudwatch:UntagResource"
+        ]
+        Resource = "arn:aws:cloudwatch:us-east-1:358870220937:alarm:netzero-*"
       },
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
         Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
-      },
-      {
-        Effect   = "Allow"
-        Action   = "s3:ListBucket"
-        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
       }
     ]
   })
+}
+
+# Wait for the inline policy's control-plane grants (CreatePolicy /
+# AttachUserPolicy) to propagate before creating/attaching the managed policy.
+resource "time_sleep" "wait_for_iam_control_plane" {
+  depends_on      = [aws_iam_user_policy.github_actions_policy]
+  create_duration = "30s"
+
+  triggers = {
+    policy = aws_iam_user_policy.github_actions_policy.policy
+  }
+}
+
+resource "aws_iam_user_policy_attachment" "deploy" {
+  user       = "netzero-github-actions"
+  policy_arn = aws_iam_policy.deploy.arn
+
+  depends_on = [time_sleep.wait_for_iam_control_plane]
 }
 
 # IAM role for Lambda functions
