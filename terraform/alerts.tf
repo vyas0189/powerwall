@@ -1,15 +1,17 @@
-# Give IAM time to propagate the deploy user's SNS/SQS/CloudWatch grants before
-# any resource that needs them is created. Without this, a fresh apply can fire
-# CreateTopic/CreateQueue within ~1s of the policy update and get a 403 because
-# the grant hasn't propagated yet (IAM is eventually consistent).
+# Give IAM time to propagate the deploy user's operational grants before any
+# resource that needs them is created. The operational permissions now come from
+# the attached customer-managed policy (aws_iam_policy.deploy), so wait on the
+# attachment. Without this, a fresh apply can fire CreateTopic/CreateQueue within
+# ~1s of the grant and get a 403 (IAM is eventually consistent).
 resource "time_sleep" "wait_for_iam_propagation" {
-  depends_on      = [aws_iam_user_policy.github_actions_policy]
+  depends_on      = [aws_iam_user_policy_attachment.deploy]
   create_duration = "30s"
 
-  # Re-wait whenever the policy document changes, so future permission additions
-  # get the same propagation grace period.
+  # Re-wait whenever the managed policy document or attachment changes, so future
+  # permission additions get the same propagation grace period.
   triggers = {
-    policy = aws_iam_user_policy.github_actions_policy.policy
+    policy     = aws_iam_policy.deploy.policy
+    attachment = aws_iam_user_policy_attachment.deploy.id
   }
 }
 
