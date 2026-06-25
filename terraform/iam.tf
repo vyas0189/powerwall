@@ -1,91 +1,11 @@
-# Inline policy for the GitHub Actions deploy user — CONTROL PLANE only.
+# Customer-managed policy: the operational/data-plane permissions for deploys,
+# explicit and scoped to netzero-* resources. The 6144-byte limit leaves room to
+# spell out least-privilege actions instead of service wildcards.
 #
-# The operational/data-plane permissions (Lambda, Scheduler, SNS, SQS,
-# CloudWatch, Logs) live in the customer-managed policy below, which has a
-# 6144-byte limit and so can spell out explicit, least-privilege actions
-# instead of the service wildcards an inline policy was forced to use (the
-# aggregate inline-policy budget for a user is only 2048 bytes).
-#
-# This inline policy intentionally retains the permissions needed to manage and
-# attach that managed policy, plus self-policy management, so the deploy user
-# can always recover from a half-applied change (it can never lock itself out).
-resource "aws_iam_user_policy" "github_actions_policy" {
-  name = "GitHubActionsPolicy"
-  user = "netzero-github-actions"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "iam:GetRole",
-          "iam:CreateRole",
-          "iam:PassRole",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies",
-          "iam:GetRolePolicy",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy"
-        ]
-        Resource = "arn:aws:iam::358870220937:role/netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy", "iam:ListAttachedUserPolicies"]
-        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "iam:CreatePolicy",
-          "iam:DeletePolicy",
-          "iam:GetPolicy",
-          "iam:GetPolicyVersion",
-          "iam:ListPolicyVersions",
-          "iam:CreatePolicyVersion",
-          "iam:DeletePolicyVersion",
-          "iam:ListPolicyTags",
-          "iam:TagPolicy",
-          "iam:UntagPolicy"
-        ]
-        Resource = "arn:aws:iam::358870220937:policy/netzero-*"
-      },
-      {
-        # Limit attach/detach to netzero-* managed policies so the deploy user
-        # cannot escalate by attaching, e.g., AdministratorAccess to itself.
-        Effect   = "Allow"
-        Action   = ["iam:AttachUserPolicy", "iam:DetachUserPolicy"]
-        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
-        Condition = {
-          ArnLike = {
-            "iam:PolicyARN" = "arn:aws:iam::358870220937:policy/netzero-*"
-          }
-        }
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
-        Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
-      },
-      {
-        Effect   = "Allow"
-        Action   = "s3:ListBucket"
-        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937"
-      }
-    ]
-  })
-}
-
-# Customer-managed policy: the operational/data-plane permissions, explicit and
-# scoped to netzero-* resources. 6144-byte limit leaves room to avoid wildcards.
+# This policy is consumed by the GitHub Actions deploy role
+# (netzero-github-actions-oidc), which the deploy workflow assumes via OIDC; the
+# attachment to that role lives in terraform-bootstrap. The former long-lived
+# IAM user (netzero-github-actions) and its access keys have been retired.
 resource "aws_iam_policy" "deploy" {
   name        = "netzero-deploy"
   description = "Operational deploy permissions for netzero infrastructure (Lambda, Scheduler, SNS, SQS, CloudWatch, Logs)."
@@ -165,24 +85,6 @@ resource "aws_iam_policy" "deploy" {
   })
 }
 
-# Wait for the inline policy's control-plane grants (CreatePolicy /
-# AttachUserPolicy) to propagate before creating/attaching the managed policy.
-resource "time_sleep" "wait_for_iam_control_plane" {
-  depends_on      = [aws_iam_user_policy.github_actions_policy]
-  create_duration = "30s"
-
-  triggers = {
-    policy = aws_iam_user_policy.github_actions_policy.policy
-  }
-}
-
-resource "aws_iam_user_policy_attachment" "deploy" {
-  user       = "netzero-github-actions"
-  policy_arn = aws_iam_policy.deploy.arn
-
-  depends_on = [time_sleep.wait_for_iam_control_plane]
-}
-
 # IAM role for Lambda functions
 resource "aws_iam_role" "lambda_role" {
   name = "netzero-lambda-role"
@@ -240,8 +142,7 @@ resource "aws_iam_role_policy" "lambda_ssm_read" {
 
 # IAM role for EventBridge Scheduler to invoke Lambda
 resource "aws_iam_role" "scheduler_role" {
-  name       = "netzero-scheduler-role"
-  depends_on = [aws_iam_user_policy.github_actions_policy]
+  name = "netzero-scheduler-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
