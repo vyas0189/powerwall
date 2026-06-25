@@ -10,6 +10,10 @@ on:
 env:
   AWS_REGION: us-east-1
   TF_VERSION: 1.5.0
+  # Role assumed via GitHub OIDC (created in terraform-bootstrap). The CI user's
+  # access-key secrets are kept in the repo as a fallback: reverting the two
+  # "Configure AWS credentials" steps below to key auth restores the old path.
+  AWS_OIDC_ROLE_ARN: arn:aws:iam::358870220937:role/netzero-github-actions-oidc
 
 jobs:
   terraform-pr:
@@ -45,6 +49,7 @@ jobs:
     name: terraform
     permissions:
       contents: read
+      id-token: write
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     
@@ -64,8 +69,7 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
     
     - name: Terraform Format Check
@@ -100,6 +104,7 @@ jobs:
     name: Apply Terraform Changes
     permissions:
       contents: read
+      id-token: write
     runs-on: ubuntu-latest
     needs: [terraform, approve]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -120,8 +125,7 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
     
     - name: Terraform Init
