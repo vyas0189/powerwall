@@ -1,8 +1,9 @@
 import json
 import os
 import time
-import requests
 import logging
+import boto3
+import requests
 from datetime import datetime
 
 logger = logging.getLogger()
@@ -12,6 +13,22 @@ logger.setLevel(logging.INFO)
 MAX_RETRIES = 3
 BACKOFF_BASE_SECONDS = 2
 REQUEST_TIMEOUT_SECONDS = 15
+
+# The NetZero API key is stored as an SSM Parameter Store SecureString and
+# fetched at runtime, so it never lives in the Lambda env config or TF state.
+API_KEY_PARAM = os.getenv("API_KEY_PARAM", "/netzero/api_key")
+_ssm_client = boto3.client("ssm")
+_api_key_cache = None
+
+
+def get_api_key():
+    """Fetch (and cache across warm invocations) the NetZero API key from the
+    SSM Parameter Store SecureString."""
+    global _api_key_cache
+    if _api_key_cache is None:
+        response = _ssm_client.get_parameter(Name=API_KEY_PARAM, WithDecryption=True)
+        _api_key_cache = response["Parameter"]["Value"]
+    return _api_key_cache
 
 
 def post_with_retry(url, config, headers):
@@ -38,17 +55,16 @@ def post_with_retry(url, config, headers):
 def lambda_handler(event, context):
     """AWS Lambda handler for evening Tesla Powerwall configuration"""
 
-    api_key = os.getenv("API_KEY")
     site_id = os.getenv("SITE_ID")
 
-    if not api_key or not site_id:
-        logger.error("API_KEY and SITE_ID environment variables are required")
+    if not site_id:
+        logger.error("SITE_ID environment variable is required")
         return {
             "statusCode": 400,
-            "body": json.dumps(
-                {"error": "Missing API_KEY or SITE_ID environment variables"}
-            ),
+            "body": json.dumps({"error": "Missing SITE_ID environment variable"}),
         }
+
+    api_key = get_api_key()
 
     url = f"https://api.netzero.energy/api/v1/{site_id}/config"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}

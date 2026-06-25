@@ -10,8 +10,8 @@ resource "aws_lambda_function" "morning_config" {
 
   environment {
     variables = {
-      API_KEY = var.api_key
-      SITE_ID = var.site_id
+      API_KEY_PARAM = var.api_key_param_name
+      SITE_ID       = var.site_id
     }
   }
 
@@ -30,8 +30,8 @@ resource "aws_lambda_function" "evening_config" {
 
   environment {
     variables = {
-      API_KEY = var.api_key
-      SITE_ID = var.site_id
+      API_KEY_PARAM = var.api_key_param_name
+      SITE_ID       = var.site_id
     }
   }
 

@@ -41,9 +41,30 @@ cd netzero-api
 Go to your repository's Settings → Secrets and variables → Actions, and add:
 
 - `AWS_ACCESS_KEY_ID` - Your AWS access key
-- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key  
-- `API_KEY` - Your NetZero API key
+- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key
 - `SITE_ID` - Your Tesla site ID
+
+> The NetZero API key is **not** a GitHub secret. It lives in an SSM Parameter
+> Store SecureString that the Lambdas read at runtime, so it never enters the
+> Lambda env config or Terraform state (see below). The old `API_KEY` GitHub
+> secret can be removed.
+
+### Store the NetZero API key (one-time)
+
+Create the SSM SecureString **before** the first deploy (it is managed
+out-of-band, not by Terraform, so the secret value never enters Terraform
+state):
+
+```bash
+aws ssm put-parameter \
+  --name "/netzero/api_key" \
+  --type SecureString \
+  --value "<your-netzero-api-key>" \
+  --region us-east-1
+```
+
+To rotate the key later, re-run with `--overwrite`. The parameter name is
+configurable via the `api_key_param_name` Terraform variable.
 
 ### 3. Deploy
 

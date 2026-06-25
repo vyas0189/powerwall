@@ -80,7 +80,6 @@ jobs:
     - name: Terraform Plan
       run: |
         terraform plan \
-          -var="api_key=${{ secrets.API_KEY }}" \
           -var="site_id=${{ secrets.SITE_ID }}" \
           -out=tfplan
     
@@ -131,7 +130,6 @@ jobs:
     - name: Terraform Plan (Fresh)
       run: |
         terraform plan \
-          -var="api_key=${{ secrets.API_KEY }}" \
           -var="site_id=${{ secrets.SITE_ID }}" \
           -out=fresh-tfplan
     
