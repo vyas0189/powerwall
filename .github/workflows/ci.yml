@@ -34,13 +34,6 @@ jobs:
           echo "✅ AWS_SECRET_ACCESS_KEY is set"
         fi
         
-        if [ -z "${{ secrets.API_KEY }}" ]; then
-          echo "❌ API_KEY secret is missing"
-          exit 1
-        else
-          echo "✅ API_KEY is set"
-        fi
-        
         if [ -z "${{ secrets.SITE_ID }}" ]; then
           echo "❌ SITE_ID secret is missing"
           exit 1

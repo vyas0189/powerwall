@@ -210,6 +210,34 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda_role.name
 }
 
+# Allow the Lambdas to read the NetZero API key (SSM SecureString) at runtime,
+# including KMS decryption via the SSM service.
+resource "aws_iam_role_policy" "lambda_ssm_read" {
+  name = "netzero-lambda-ssm-read"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = "arn:aws:ssm:us-east-1:358870220937:parameter${var.api_key_param_name}"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "kms:Decrypt"
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "ssm.us-east-1.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
 # IAM role for EventBridge Scheduler to invoke Lambda
 resource "aws_iam_role" "scheduler_role" {
   name       = "netzero-scheduler-role"
