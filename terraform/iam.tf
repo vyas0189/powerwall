@@ -84,7 +84,6 @@ resource "aws_iam_policy" "deploy" {
         Action = [
           "logs:CreateLogGroup",
           "logs:DeleteLogGroup",
-          "logs:DescribeLogGroups",
           "logs:PutRetentionPolicy",
           "logs:DeleteRetentionPolicy",
           "logs:ListTagsForResource",
@@ -92,6 +91,12 @@ resource "aws_iam_policy" "deploy" {
           "logs:UntagResource"
         ]
         Resource = "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/netzero-*"
+      },
+      {
+        # DescribeLogGroups is a list action with no resource-level scoping.
+        Effect   = "Allow"
+        Action   = "logs:DescribeLogGroups"
+        Resource = "*"
       }
     ]
   })

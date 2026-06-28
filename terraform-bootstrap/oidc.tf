@@ -104,8 +104,16 @@ resource "aws_iam_role_policy" "oidc_control_plane" {
       },
       {
         Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
+        Action   = "logs:CreateLogGroup"
         Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
+      },
+      {
+        # DescribeLogGroups is a list action that does not support resource-level
+        # scoping (AWS evaluates it against all log groups), so it must be on "*".
+        # Needed so the deploy role can import the Lambda-created log groups.
+        Effect   = "Allow"
+        Action   = "logs:DescribeLogGroups"
+        Resource = "*"
       },
       {
         Effect = "Allow"
