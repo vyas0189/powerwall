@@ -108,9 +108,12 @@ resource "aws_iam_role_policy" "oidc_control_plane" {
         Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate"
+        Effect = "Allow"
+        Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        # Covers the state object plus the native S3 lock file
+        # (terraform.tfstate.tflock, written when use_lockfile = true) and
+        # state backups.
+        Resource = "arn:aws:s3:::netzero-terraform-state-358870220937/terraform.tfstate*"
       },
       {
         Effect   = "Allow"
