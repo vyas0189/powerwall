@@ -1,3 +1,6 @@
+# Current account id, used to build resource ARNs instead of hardcoding it.
+data "aws_caller_identity" "current" {}
+
 # Customer-managed policy: the operational/data-plane permissions for deploys,
 # explicit and scoped to netzero-* resources. The 6144-byte limit leaves room to
 # spell out least-privilege actions instead of service wildcards.
@@ -26,12 +29,12 @@ resource "aws_iam_policy" "deploy" {
           "lambda:GetFunctionCodeSigningConfig",
           "lambda:GetPolicy"
         ]
-        Resource = "arn:aws:lambda:us-east-1:358870220937:function:netzero-*"
+        Resource = "arn:aws:lambda:us-east-1:${data.aws_caller_identity.current.account_id}:function:netzero-*"
       },
       {
         Effect   = "Allow"
         Action   = ["scheduler:CreateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule", "scheduler:UpdateSchedule"]
-        Resource = "arn:aws:scheduler:us-east-1:358870220937:schedule/default/netzero-*"
+        Resource = "arn:aws:scheduler:us-east-1:${data.aws_caller_identity.current.account_id}:schedule/default/netzero-*"
       },
       {
         Effect = "Allow"
@@ -48,7 +51,7 @@ resource "aws_iam_policy" "deploy" {
           "sns:TagResource",
           "sns:UntagResource"
         ]
-        Resource = "arn:aws:sns:us-east-1:358870220937:netzero-*"
+        Resource = "arn:aws:sns:us-east-1:${data.aws_caller_identity.current.account_id}:netzero-*"
       },
       {
         Effect = "Allow"
@@ -62,7 +65,7 @@ resource "aws_iam_policy" "deploy" {
           "sqs:TagQueue",
           "sqs:UntagQueue"
         ]
-        Resource = "arn:aws:sqs:us-east-1:358870220937:netzero-*"
+        Resource = "arn:aws:sqs:us-east-1:${data.aws_caller_identity.current.account_id}:netzero-*"
       },
       {
         Effect = "Allow"
@@ -74,12 +77,21 @@ resource "aws_iam_policy" "deploy" {
           "cloudwatch:TagResource",
           "cloudwatch:UntagResource"
         ]
-        Resource = "arn:aws:cloudwatch:us-east-1:358870220937:alarm:netzero-*"
+        Resource = "arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarm:netzero-*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:DescribeLogGroups"]
-        Resource = "arn:aws:logs:us-east-1:358870220937:log-group:/aws/lambda/netzero-*"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:DeleteLogGroup",
+          "logs:DescribeLogGroups",
+          "logs:PutRetentionPolicy",
+          "logs:DeleteRetentionPolicy",
+          "logs:ListTagsForResource",
+          "logs:TagResource",
+          "logs:UntagResource"
+        ]
+        Resource = "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/netzero-*"
       }
     ]
   })
@@ -124,7 +136,7 @@ resource "aws_iam_role_policy" "lambda_ssm_read" {
       {
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = "arn:aws:ssm:us-east-1:358870220937:parameter${var.api_key_param_name}"
+        Resource = "arn:aws:ssm:us-east-1:${data.aws_caller_identity.current.account_id}:parameter${var.api_key_param_name}"
       },
       {
         Effect   = "Allow"

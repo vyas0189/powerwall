@@ -40,14 +40,19 @@ cd netzero-api
 
 Go to your repository's Settings → Secrets and variables → Actions, and add:
 
-- `AWS_ACCESS_KEY_ID` - Your AWS access key
-- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key
 - `SITE_ID` - Your Tesla site ID
 
-> The NetZero API key is **not** a GitHub secret. It lives in an SSM Parameter
-> Store SecureString that the Lambdas read at runtime, so it never enters the
-> Lambda env config or Terraform state (see below). The old `API_KEY` GitHub
-> secret can be removed.
+> **AWS authentication uses GitHub OIDC, not long-lived keys.** The deploy
+> workflow assumes the `netzero-github-actions-oidc` IAM role (created in
+> `terraform-bootstrap/oidc.tf`, trust scoped to this repo's `main` branch), so
+> no `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` secrets are needed — if they
+> still exist from an older setup, delete them and deactivate the matching IAM
+> access keys.
+
+> The NetZero API key is **not** a GitHub secret either. It lives in an SSM
+> Parameter Store SecureString that the Lambdas read at runtime, so it never
+> enters the Lambda env config or Terraform state (see below). The old `API_KEY`
+> GitHub secret can be removed.
 
 ### Store the NetZero API key (one-time)
 
@@ -94,10 +99,13 @@ Check the Actions tab in your GitHub repository to monitor deployment progress a
 
 ### Terraform (Local)
 
+First store the NetZero API key in SSM (one-time, see "Store the NetZero API key"
+above) — it is **not** a Terraform variable, so it never enters TF state. Then:
+
 ```bash
 cd terraform
 terraform init
-terraform plan -var="api_key=$NET_ZERO_API_KEY" -var="site_id=$NET_ZERO_SITE_ID" -out=tfplan
+terraform plan -var="site_id=$NET_ZERO_SITE_ID" -out=tfplan
 terraform apply tfplan
 ```
 

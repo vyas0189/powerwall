@@ -9,40 +9,6 @@ on:
     branches: [ main ]
 
 jobs:
-  validate-secrets:
-    name: Validate Secrets
-    runs-on: ubuntu-latest
-    # Only run secret validation on push to main, not on PRs
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Check required secrets
-      run: |
-        echo "Checking required secrets..."
-        
-        if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-          echo "❌ AWS_ACCESS_KEY_ID secret is missing"
-          exit 1
-        else
-          echo "✅ AWS_ACCESS_KEY_ID is set"
-        fi
-        
-        if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-          echo "❌ AWS_SECRET_ACCESS_KEY secret is missing"
-          exit 1
-        else
-          echo "✅ AWS_SECRET_ACCESS_KEY is set"
-        fi
-        
-        if [ -z "${{ secrets.SITE_ID }}" ]; then
-          echo "❌ SITE_ID secret is missing"
-          exit 1
-        else
-          echo "✅ SITE_ID is set"
-        fi
-        
-        echo "🎉 All required secrets are configured!"
-
   lint-and-test:
     name: Lint and Test
     runs-on: ubuntu-latest
@@ -60,22 +26,34 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install flake8 black pytest
-    
+        pip install flake8 black pytest bandit pip-audit
+
     - name: Lint with flake8
       run: |
         # Stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # Exit-zero treats all errors as warnings
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
-    
+
     - name: Format check with black
       run: black --check .
-    
+
     - name: Validate Python files
       run: |
         python -m py_compile morning_config.py
         python -m py_compile evening_config.py
+
+    - name: Run tests
+      run: pytest -q
+
+    - name: Security scan with bandit
+      # Scope to the application modules. The test file uses pytest `assert`s
+      # (B101), which are benign there; scanning app code only keeps the gate
+      # meaningful without skipping B101 globally.
+      run: bandit -r morning_config.py evening_config.py netzero_client.py
+
+    - name: Dependency vulnerability audit
+      run: pip-audit -r requirements.txt
 
   terraform-check:
     name: Terraform Check
@@ -92,13 +70,36 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
       with:
-        terraform_version: 1.5.0
+        terraform_version: 1.10.5
     
     - name: Terraform Format Check
       run: terraform fmt -check -recursive
     
     - name: Terraform Init
       run: terraform init -backend=false
-    
+
     - name: Terraform Validate
       run: terraform validate
+
+  iac-scan:
+    name: IaC Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+    - name: Setup Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      with:
+        python-version: '3.12'
+
+    - name: Install Checkov
+      run: pip install checkov
+
+    # Run via pip (no third-party action to pin) and report findings without
+    # failing the build: Checkov's opinionated defaults flag many low-signal
+    # items for this minimal serverless stack, so it is informational. Review
+    # the findings in the job log and tighten config as warranted.
+    - name: Checkov scan (informational)
+      run: checkov -d terraform -d terraform-bootstrap --compact --quiet --soft-fail

@@ -9,10 +9,9 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  TF_VERSION: 1.5.0
-  # Role assumed via GitHub OIDC (created in terraform-bootstrap). The CI user's
-  # access-key secrets are kept in the repo as a fallback: reverting the two
-  # "Configure AWS credentials" steps below to key auth restores the old path.
+  TF_VERSION: 1.10.5
+  # Role assumed via GitHub OIDC (created in terraform-bootstrap). This is the
+  # only auth path; the former long-lived CI access keys have been retired.
   AWS_OIDC_ROLE_ARN: arn:aws:iam::358870220937:role/netzero-github-actions-oidc
 
 jobs:
@@ -86,7 +85,18 @@ jobs:
         terraform plan \
           -var="site_id=${{ secrets.SITE_ID }}" \
           -out=tfplan
-    
+
+    # Persist the approved plan so the apply job applies exactly what was
+    # reviewed, rather than re-planning. The plan embeds the site_id var value,
+    # so it is retained for only 1 day and relies on the repo being private.
+    - name: Upload Terraform plan
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: tfplan
+        path: terraform/tfplan
+        retention-days: 1
+        if-no-files-found: error
+
 
   approve:
     name: Manual Approval
@@ -130,13 +140,15 @@ jobs:
     
     - name: Terraform Init
       run: terraform init
-    
-    - name: Terraform Plan (Fresh)
-      run: |
-        terraform plan \
-          -var="site_id=${{ secrets.SITE_ID }}" \
-          -out=fresh-tfplan
-    
+
+    # Retrieve the plan produced (and approved) in the terraform job and apply
+    # exactly that, so the applied changes match what was reviewed.
+    - name: Download Terraform plan
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: tfplan
+        path: terraform
+
     - name: Terraform Apply
-      run: terraform apply -auto-approve fresh-tfplan
+      run: terraform apply -auto-approve tfplan
 

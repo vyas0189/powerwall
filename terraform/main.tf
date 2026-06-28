@@ -11,13 +11,22 @@ terraform {
   }
 
   backend "s3" {
-    bucket  = "netzero-terraform-state-358870220937"
-    key     = "terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
+    bucket       = "netzero-terraform-state-358870220937"
+    key          = "terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true # native S3 state locking (Terraform >= 1.10)
   }
 }
 
 provider "aws" {
   region = var.aws_region
+
+  default_tags {
+    tags = {
+      Project     = "netzero-scheduler"
+      Environment = "production"
+      ManagedBy   = "terraform"
+    }
+  }
 }
