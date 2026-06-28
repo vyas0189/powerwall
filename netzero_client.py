@@ -45,10 +45,11 @@ def get_api_key():
                 Name=API_KEY_PARAM, WithDecryption=True
             )
         except Exception:
-            # Don't surface the raw boto traceback (it echoes the parameter
-            # name); log a generic message and re-raise so the invocation still
-            # fails and triggers the alarm / DLQ path.
-            logger.error("Failed to read NetZero API key from SSM (%s)", API_KEY_PARAM)
+            # Don't surface the raw boto traceback; log a generic message and
+            # re-raise so the invocation still fails and triggers the alarm /
+            # DLQ path. The parameter name is intentionally omitted to keep any
+            # credential-shaped value out of the logs.
+            logger.error("Failed to read the NetZero API key from SSM Parameter Store")
             raise
         _api_key_cache = response["Parameter"]["Value"]
     return _api_key_cache
