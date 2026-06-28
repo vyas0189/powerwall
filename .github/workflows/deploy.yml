@@ -149,6 +149,24 @@ jobs:
         name: tfplan
         path: terraform
 
+    # Build the Lambda deployment packages on this runner. The Terraform config
+    # also builds them via a null_resource provisioner, but that only re-runs
+    # when its source hashes change; a function-code update applied from a saved
+    # plan can otherwise reference a .zip that was never built on this fresh
+    # runner. Building here guarantees the artifacts exist before apply.
+    - name: Build Lambda packages
+      working-directory: ${{ github.workspace }}
+      run: |
+        for fn in morning evening; do
+          rm -rf "temp_$fn"
+          mkdir -p "temp_$fn"
+          cp "${fn}_config.py" netzero_client.py requirements.txt "temp_$fn/"
+          python3 -m pip install --quiet -r requirements.txt -t "temp_$fn"
+          (cd "temp_$fn" && zip -rq "$GITHUB_WORKSPACE/terraform/${fn}_config.zip" .)
+          rm -rf "temp_$fn"
+        done
+        ls -l terraform/morning_config.zip terraform/evening_config.zip
+
     - name: Terraform Apply
       run: terraform apply -auto-approve tfplan
 
