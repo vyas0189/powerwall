@@ -19,6 +19,9 @@ resource "time_sleep" "wait_for_iam_propagation" {
 resource "aws_sns_topic" "alerts" {
   name = "netzero-alerts"
 
+  # Encrypt messages at rest with the AWS-managed SNS KMS key (no extra cost).
+  kms_master_key_id = "alias/aws/sns"
+
   # Wait for the deploy user's SNS permissions to propagate before creating
   depends_on = [time_sleep.wait_for_iam_propagation]
 }
@@ -37,6 +40,9 @@ resource "aws_sns_topic_subscription" "alerts_email" {
 resource "aws_sqs_queue" "scheduler_dlq" {
   name                      = "netzero-scheduler-dlq"
   message_retention_seconds = 1209600 # 14 days (max)
+
+  # Encrypt messages at rest with SSE-SQS (SQS-managed keys; no KMS perms/cost).
+  sqs_managed_sse_enabled = true
 
   # Wait for the deploy user's SQS permissions to propagate before creating
   depends_on = [time_sleep.wait_for_iam_propagation]
@@ -106,6 +112,30 @@ resource "aws_cloudwatch_metric_alarm" "evening_errors" {
 
   dimensions = {
     FunctionName = aws_lambda_function.evening_config.function_name
+  }
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+
+  depends_on = [time_sleep.wait_for_iam_propagation]
+}
+
+# Alarm when any scheduler event lands in the dead-letter queue (i.e. a run
+# failed even after in-code and scheduler retries) so failures aren't silent.
+resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
+  alarm_name          = "netzero-scheduler-dlq-messages"
+  alarm_description   = "A scheduled Tesla config run exhausted all retries and was dead-lettered"
+  namespace           = "AWS/SQS"
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  statistic           = "Maximum"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 1
+  period              = 300
+  evaluation_periods  = 1
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = aws_sqs_queue.scheduler_dlq.name
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]

@@ -59,8 +59,10 @@ resource "aws_iam_role_policy_attachment" "oidc_deploy" {
   policy_arn = "arn:aws:iam::358870220937:policy/netzero-deploy"
 }
 
-# Control-plane permissions: mirrors the CI user's inline policy so the role can
-# manage IAM (roles, the user's policies, the managed policy), logs, and state.
+# Control-plane permissions: lets the deploy role manage the netzero-* IAM roles
+# and the managed policy, plus logs and Terraform state. (The former long-lived
+# CI user, netzero-github-actions, was retired, so its user-scoped grants have
+# been removed.)
 resource "aws_iam_role_policy" "oidc_control_plane" {
   name = "netzero-control-plane"
   role = aws_iam_role.github_actions_oidc.id
@@ -85,11 +87,6 @@ resource "aws_iam_role_policy" "oidc_control_plane" {
         Resource = "arn:aws:iam::358870220937:role/netzero-*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["iam:GetUserPolicy", "iam:PutUserPolicy", "iam:ListAttachedUserPolicies"]
-        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
-      },
-      {
         Effect = "Allow"
         Action = [
           "iam:CreatePolicy",
@@ -104,16 +101,6 @@ resource "aws_iam_role_policy" "oidc_control_plane" {
           "iam:UntagPolicy"
         ]
         Resource = "arn:aws:iam::358870220937:policy/netzero-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["iam:AttachUserPolicy", "iam:DetachUserPolicy"]
-        Resource = "arn:aws:iam::358870220937:user/netzero-github-actions"
-        Condition = {
-          ArnLike = {
-            "iam:PolicyARN" = "arn:aws:iam::358870220937:policy/netzero-*"
-          }
-        }
       },
       {
         Effect   = "Allow"
