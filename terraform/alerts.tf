@@ -19,8 +19,14 @@ resource "time_sleep" "wait_for_iam_propagation" {
 resource "aws_sns_topic" "alerts" {
   name = "netzero-alerts"
 
-  # Encrypt messages at rest with the AWS-managed SNS KMS key (no extra cost).
-  kms_master_key_id = "alias/aws/sns"
+  # NOTE: Do NOT set kms_master_key_id = "alias/aws/sns" here. The AWS-managed
+  # SNS key has a fixed key policy that does not grant the CloudWatch service
+  # principal (cloudwatch.amazonaws.com) kms:GenerateDataKey*/kms:Decrypt, so
+  # CloudWatch alarms silently fail to publish ("Failed to execute action") and
+  # no alert email is sent. This topic carries only alarm metadata (no secrets),
+  # so it is intentionally left unencrypted. If encryption at rest is required,
+  # use a customer-managed KMS key whose policy grants cloudwatch.amazonaws.com
+  # (and events.amazonaws.com) those actions.
 
   # Wait for the deploy user's SNS permissions to propagate before creating
   depends_on = [time_sleep.wait_for_iam_propagation]
