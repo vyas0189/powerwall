@@ -117,3 +117,26 @@ def test_get_api_key_logs_and_reraises_on_ssm_error(monkeypatch):
 
     with pytest.raises(RuntimeError):
         netzero_client.get_api_key()
+
+
+def test_schedule_configs_match_the_free_window_strategy():
+    """Pin the payloads to the Direct Energy "Twelve Hour Power 24" windows.
+
+    Free 9 PM - 9 AM, ~27.7c/kWh 9 AM - 9 PM: charge from the grid overnight and
+    hold a full pack at 9 AM, then run the house off the battery through the day.
+    """
+    from evening_config import EVENING_CONFIG
+    from morning_config import MORNING_CONFIG
+
+    assert MORNING_CONFIG == {
+        "backup_reserve_percent": 20,
+        "operational_mode": "autonomous",
+        "energy_exports": "pv_only",
+        "grid_charging": False,
+    }
+    assert EVENING_CONFIG == {
+        "backup_reserve_percent": 100,
+        "operational_mode": "autonomous",
+        "energy_exports": "pv_only",
+        "grid_charging": True,
+    }
