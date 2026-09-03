@@ -1,13 +1,16 @@
-# EventBridge Scheduler for morning schedule (6:45 AM CST/CDT - DST handled automatically)
+# EventBridge Scheduler for morning schedule (8:55 AM CST/CDT - DST handled automatically).
+# Fires just before 9:00 AM, when the "Twelve Hour Power 24" free period ends and grid
+# power jumps to ~27.7c/kWh, so grid charging is already off by the time the meter starts
+# charging for it.
 resource "aws_scheduler_schedule" "morning_schedule" {
   name        = "netzero-morning-schedule"
-  description = "Trigger morning Tesla configuration at 6:45 AM CST/CDT daily"
+  description = "Trigger morning Tesla configuration at 8:55 AM CST/CDT daily (just before the 9 AM free-period end)"
 
   flexible_time_window {
     mode = "OFF"
   }
 
-  schedule_expression          = "cron(45 6 * * ? *)"
+  schedule_expression          = "cron(55 8 * * ? *)"
   schedule_expression_timezone = "America/Chicago"
 
   target {
@@ -25,16 +28,18 @@ resource "aws_scheduler_schedule" "morning_schedule" {
   }
 }
 
-# EventBridge Scheduler for evening schedule (9:15 PM CST/CDT - DST handled automatically)
+# EventBridge Scheduler for evening schedule (9:05 PM CST/CDT - DST handled automatically).
+# Fires just after 9:00 PM, when the free period begins, so the Powerwall never grid-charges
+# while power is still billable.
 resource "aws_scheduler_schedule" "evening_schedule" {
   name        = "netzero-evening-schedule"
-  description = "Trigger evening Tesla configuration at 9:15 PM CST/CDT daily"
+  description = "Trigger evening Tesla configuration at 9:05 PM CST/CDT daily (just after the 9 PM free-period start)"
 
   flexible_time_window {
     mode = "OFF"
   }
 
-  schedule_expression          = "cron(15 21 * * ? *)"
+  schedule_expression          = "cron(5 21 * * ? *)"
   schedule_expression_timezone = "America/Chicago"
 
   target {

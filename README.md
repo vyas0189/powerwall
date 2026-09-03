@@ -6,8 +6,8 @@ Automated Tesla energy management using AWS Lambda and the NetZero Developer API
 
 This project provides two scheduled Lambda functions that automatically configure your Tesla energy system:
 
-- **Morning Job (6:45 AM Central Time daily)**: Sets backup reserve to 20%, autonomous mode, battery exports enabled, grid charging disabled
-- **Evening Job (9:15 PM Central Time daily)**: Sets backup reserve to 100%, autonomous mode, solar-only exports, grid charging enabled
+- **Morning Job (8:55 AM Central Time daily)**: Sets backup reserve to 20%, autonomous mode, solar-only exports, grid charging disabled — the battery carries the house through the expensive daytime window
+- **Evening Job (9:05 PM Central Time daily)**: Sets backup reserve to 100%, autonomous mode, solar-only exports, grid charging enabled — the battery refills on free overnight power
 
 **Daylight Saving Time Support**: The scheduler automatically adjusts between CDT (Central Daylight Time) and CST (Central Standard Time) to ensure jobs run at the correct local time year-round.
 
@@ -126,6 +126,7 @@ terraform apply tfplan
 - `.github/workflows/ci.yml` - Code quality and security checks
 - `.github/dependabot.yml` - Automated dependency updates
 - `SECURITY.md` - Security policy and vulnerability reporting
+- `CLAUDE.md` - Repo conventions, rate-plan rationale, and deploy gotchas for AI assistants
 
 ## Testing
 
@@ -138,28 +139,43 @@ aws lambda invoke --function-name netzero-evening-config --payload '{}' response
 
 ## Configuration Details
 
-### Morning Configuration (6:45 AM Central Time)
+### Morning Configuration (8:55 AM Central Time)
 - Backup Reserve: 20%
 - Operational Mode: Autonomous
-- Energy Exports: Battery OK (solar and battery)
+- Energy Exports: Solar Only
 - Grid Charging: Disabled
 
-### Evening Configuration (9:15 PM Central Time)
+### Evening Configuration (9:05 PM Central Time)
 - Backup Reserve: 100%
 - Operational Mode: Autonomous
 - Energy Exports: Solar Only
 - Grid Charging: Enabled
 
+### Why These Times
+
+The schedule is tuned to the **Direct Energy "Twelve Hour Power 24"** plan (CenterPoint service
+area, in effect since 2026-09-04):
+
+| Window | Energy | TDU delivery | Effective rate |
+|---|---|---|---|
+| 9:00 PM – 9:00 AM ("Designated Free Period") | 0¢/kWh | waived | **free** |
+| 9:00 AM – 9:00 PM | 22.7042¢/kWh | 4.9811¢/kWh | **≈27.7¢/kWh** |
+
+So the strategy is: grid-charge to 100% overnight while power is free, then run the house off
+the battery all day. The jobs fire five minutes *inside* the safe side of each boundary — 8:55 AM
+(grid charging is already off before billing starts) and 9:05 PM (grid charging is only enabled
+once power is free). Don't "round" them to 9:00/9:00; the buffers absorb scheduler and NetZero
+API latency, which would otherwise mean charging the battery at 27.7¢/kWh.
+
+The plan has no battery buyback, so exports stay `pv_only` in both configs: a kWh held in the
+battery saves 27.7¢, while the same kWh exported earns nothing.
+
 ### Daylight Saving Time Handling
 
-The system automatically handles DST transitions using multiple EventBridge rules:
-
-- **CDT Period (March 15-October 31)**: Schedules trigger at 11:45 AM UTC (morning) and 2:15 AM UTC (evening)
-- **CST Period (November 8-February 28/29)**: Schedules trigger at 12:45 PM UTC (morning) and 3:15 AM UTC (evening)
-- **March Transition Week (Days 8-14)**: Both UTC times trigger to cover the second Sunday when DST starts
-- **November Transition Week (Days 1-7)**: Both UTC times trigger to cover the first Sunday when DST ends
-
-This ensures your Tesla system is configured at exactly 6:45 AM and 9:15 PM Houston local time throughout the year, regardless of daylight saving time changes. During DST transition weeks, the job may run twice, but only the correct local time execution will apply the configuration.
+Each job is a single EventBridge schedule with `schedule_expression_timezone =
+"America/Chicago"`, so AWS resolves the cron expression against Central local time and shifts
+automatically between CDT and CST. Each job fires exactly once per day, including on DST
+transition days — no duplicate runs and no UTC offsets to maintain.
 
 ## Reliability & Alerting
 
