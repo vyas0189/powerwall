@@ -131,12 +131,12 @@ def test_schedule_configs_match_the_free_window_strategy():
     assert MORNING_CONFIG == {
         "backup_reserve_percent": 20,
         "operational_mode": "autonomous",
-        "energy_exports": "pv_only",
+        "energy_exports": "never",
         "grid_charging": False,
     }
     assert EVENING_CONFIG == {
         "backup_reserve_percent": 100,
         "operational_mode": "autonomous",
-        "energy_exports": "pv_only",
+        "energy_exports": "never",
         "grid_charging": True,
     }

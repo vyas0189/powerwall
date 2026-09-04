@@ -6,8 +6,8 @@ Automated Tesla energy management using AWS Lambda and the NetZero Developer API
 
 This project provides two scheduled Lambda functions that automatically configure your Tesla energy system:
 
-- **Morning Job (8:55 AM Central Time daily)**: Sets backup reserve to 20%, autonomous mode, solar-only exports, grid charging disabled — the battery carries the house through the expensive daytime window
-- **Evening Job (9:05 PM Central Time daily)**: Sets backup reserve to 100%, autonomous mode, solar-only exports, grid charging enabled — the battery refills on free overnight power
+- **Morning Job (8:55 AM Central Time daily)**: Sets backup reserve to 20%, autonomous mode, grid exports disabled, grid charging disabled — the battery carries the house through the expensive daytime window
+- **Evening Job (9:05 PM Central Time daily)**: Sets backup reserve to 100%, autonomous mode, grid exports disabled, grid charging enabled — the battery refills on free overnight power
 
 **Daylight Saving Time Support**: The scheduler automatically adjusts between CDT (Central Daylight Time) and CST (Central Standard Time) to ensure jobs run at the correct local time year-round.
 
@@ -142,13 +142,13 @@ aws lambda invoke --function-name netzero-evening-config --payload '{}' response
 ### Morning Configuration (8:55 AM Central Time)
 - Backup Reserve: 20%
 - Operational Mode: Autonomous
-- Energy Exports: Solar Only
+- Energy Exports: Never (no backfeed to the grid)
 - Grid Charging: Disabled
 
 ### Evening Configuration (9:05 PM Central Time)
 - Backup Reserve: 100%
 - Operational Mode: Autonomous
-- Energy Exports: Solar Only
+- Energy Exports: Never (no backfeed to the grid)
 - Grid Charging: Enabled
 
 ### Why These Times
@@ -167,8 +167,10 @@ the battery all day. The jobs fire five minutes *inside* the safe side of each b
 once power is free). Don't "round" them to 9:00/9:00; the buffers absorb scheduler and NetZero
 API latency, which would otherwise mean charging the battery at 27.7¢/kWh.
 
-The plan has no battery buyback, so exports stay `pv_only` in both configs: a kWh held in the
-battery saves 27.7¢, while the same kWh exported earns nothing.
+Exports are set to `never` in both configs: the site has no export agreement, so the system must
+not backfeed the grid at all. When the battery is full and solar exceeds house load, the
+inverter curtails instead of exporting. This is a hard constraint — `pv_only` would still allow
+solar to flow out, and the plan has no buyback that would make that worth doing anyway.
 
 ### Daylight Saving Time Handling
 

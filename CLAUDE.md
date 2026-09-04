@@ -32,8 +32,9 @@ side of each boundary.
 **Do not "clean up" those times to 9:00/9:00.** The asymmetric buffers are deliberate: the morning
 job must disable grid charging *before* billing starts, and the evening job must enable it *after*
 power is free. Rounding them risks charging the battery at 27.7¢/kWh on any scheduler or API
-latency. Likewise, `energy_exports` is `pv_only` in both configs because this plan has no battery
-buyback — exported battery energy earns $0 while a stored kWh saves 27.7¢. If the plan changes,
+latency. Likewise, `energy_exports` is `never` in both configs because the site has no export
+agreement and must not backfeed the grid — this is a hard constraint, not an optimization, so
+do not "restore" `pv_only` to recover curtailed solar. If the plan changes,
 update the times, the configs, the README "Why These Times" section, and the config assertions in
 `test_netzero_client.py` together.
 
