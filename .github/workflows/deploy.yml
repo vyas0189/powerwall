@@ -87,13 +87,23 @@ jobs:
           -out=tfplan
 
     # Persist the approved plan so the apply job applies exactly what was
-    # reviewed, rather than re-planning. The plan embeds the site_id var value,
-    # so it is retained for only 1 day and relies on the repo being private.
+    # reviewed, rather than re-planning. The plan embeds the site_id value and
+    # a state snapshot, and artifacts on a public repo can be downloaded by any
+    # signed-in GitHub user, so it is encrypted with the SITE_ID secret first:
+    # only someone who already holds site_id can read it. Retained for 1 day.
+    - name: Encrypt Terraform plan
+      env:
+        TFPLAN_KEY: ${{ secrets.SITE_ID }}
+      run: |
+        openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
+          -pass env:TFPLAN_KEY -in tfplan -out tfplan.enc
+        rm tfplan
+
     - name: Upload Terraform plan
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: tfplan
-        path: terraform/tfplan
+        path: terraform/tfplan.enc
         retention-days: 1
         if-no-files-found: error
 
@@ -148,6 +158,14 @@ jobs:
       with:
         name: tfplan
         path: terraform
+
+    - name: Decrypt Terraform plan
+      env:
+        TFPLAN_KEY: ${{ secrets.SITE_ID }}
+      run: |
+        openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+          -pass env:TFPLAN_KEY -in tfplan.enc -out tfplan
+        rm tfplan.enc
 
     # Build the Lambda deployment packages on this runner. The Terraform config
     # also builds them via a null_resource provisioner, but that only re-runs
