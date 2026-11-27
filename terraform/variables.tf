@@ -7,6 +7,7 @@ variable "aws_region" {
 variable "site_id" {
   description = "Tesla site ID"
   type        = string
+  sensitive   = true
 }
 
 variable "api_key_param_name" {
