@@ -24,7 +24,7 @@ This project provides two scheduled Lambda functions that automatically configur
 
 - AWS account with appropriate permissions
 - GitHub repository with Actions enabled
-- Python 3.12+
+- Python 3.15+
 - NetZero Developer API key and Site ID
 
 ## GitHub Actions Deployment (Recommended)
