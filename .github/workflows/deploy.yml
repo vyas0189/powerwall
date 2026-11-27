@@ -9,7 +9,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  TF_VERSION: 1.10.5
+  TF_VERSION: 1.17.2
   # Role assumed via GitHub OIDC (created in terraform-bootstrap). This is the
   # only auth path; the former long-lived CI access keys have been retired.
   AWS_OIDC_ROLE_ARN: arn:aws:iam::358870220937:role/netzero-github-actions-oidc
@@ -66,7 +66,7 @@ jobs:
         terraform_version: ${{ env.TF_VERSION }}
     
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
       with:
         role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
@@ -143,7 +143,7 @@ jobs:
         terraform_version: ${{ env.TF_VERSION }}
     
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
       with:
         role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}

@@ -118,7 +118,7 @@ terraform apply tfplan
 - `requirements.txt` - Python dependencies (automatically managed)
 
 ### Infrastructure
-- `terraform/main.tf` - Terraform infrastructure as code (AWS provider v6.9)
+- `terraform/main.tf` - Terraform infrastructure as code (AWS provider v6.74)
 - `terraform-bootstrap/main.tf` - S3 state backend setup
 
 ### CI/CD & Security
