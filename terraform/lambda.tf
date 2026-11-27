@@ -17,7 +17,7 @@ resource "aws_lambda_function" "morning_config" {
   function_name    = "netzero-morning-config"
   role             = aws_iam_role.lambda_role.arn
   handler          = "morning_config.lambda_handler"
-  runtime          = "python3.12"
+  runtime          = "python3.15"
   timeout          = 60
   source_code_hash = base64sha256("${filemd5("${path.module}/../morning_config.py")}-${filemd5("${path.module}/../netzero_client.py")}-${filemd5("${path.module}/../requirements.txt")}")
 
@@ -37,7 +37,7 @@ resource "aws_lambda_function" "evening_config" {
   function_name    = "netzero-evening-config"
   role             = aws_iam_role.lambda_role.arn
   handler          = "evening_config.lambda_handler"
-  runtime          = "python3.12"
+  runtime          = "python3.15"
   timeout          = 60
   source_code_hash = base64sha256("${filemd5("${path.module}/../evening_config.py")}-${filemd5("${path.module}/../netzero_client.py")}-${filemd5("${path.module}/../requirements.txt")}")
 

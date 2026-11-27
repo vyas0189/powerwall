@@ -167,6 +167,14 @@ jobs:
           -pass env:TFPLAN_KEY -in tfplan.enc -out tfplan
         rm tfplan.enc
 
+    # Package with the same Python as the Lambda runtime: some of requests'
+    # dependencies ship version-specific compiled wheels, and the runner's
+    # system Python would install ones the runtime can't import.
+    - name: Setup Python
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      with:
+        python-version: '3.15'
+
     # Build the Lambda deployment packages on this runner. The Terraform config
     # also builds them via a null_resource provisioner, but that only re-runs
     # when its source hashes change; a function-code update applied from a saved
